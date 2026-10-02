@@ -32,8 +32,10 @@ async function startSession(req, res, userId, remember) {
 export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
+      // the public address (never a locked per-deployment link), for the Invite friends card
+      const prod = process.env.SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? 'https://' + process.env.VERCEL_PROJECT_PRODUCTION_URL : '');
       const u = await currentUser(req);
-      return send(res, 200, { user: u ? { username: u.username, name: u.display_name } : null });
+      return send(res, 200, { user: u ? { username: u.username, name: u.display_name } : null, site: prod || null });
     }
     if (req.method !== 'POST') return fail(res, 405, 'method');
     if (!sameOrigin(req)) return fail(res, 403, 'origin');
