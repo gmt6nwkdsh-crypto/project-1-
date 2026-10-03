@@ -4,3 +4,5 @@ node_modules/
 .env.*
 orig.html
 dev/convert.py
+dev/*.py
+dev/__pycache__/

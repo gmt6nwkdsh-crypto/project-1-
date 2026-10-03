@@ -366,6 +366,34 @@ body.gated{padding-bottom:max(20px,env(safe-area-inset-bottom,0px))}
 @keyframes hsBob{50%{transform:translate(-50%,6px)}}
 @media (prefers-reduced-motion: reduce){.hs,.hs-shade{animation:none}.hs-arrow{animation:none}}
 @media (prefers-reduced-motion: reduce){.wl *{animation-duration:1ms!important;animation-delay:0s!important}}
+
+/* log sheet tabs scroll sideways on small phones */
+#modeSeg{display:flex;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+#modeSeg::-webkit-scrollbar{display:none}
+#modeSeg button{flex:1 0 auto;padding:8px 12px}
+/* barcode scanner */
+.scanbox{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:4/3;display:grid;place-items:center}
+.scanbox video{width:100%;height:100%;object-fit:cover;display:block}
+.scanbox .aim{position:absolute;left:12%;right:12%;top:34%;bottom:34%;border:2px solid rgba(255,255,255,.85);border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+.scanbox .aim::after{content:"";position:absolute;left:6%;right:6%;top:50%;height:2px;background:var(--accent);box-shadow:0 0 12px var(--accent);animation:scanY 1.6s ease-in-out infinite alternate}
+@keyframes scanY{from{transform:translateY(-26px)}to{transform:translateY(26px)}}
+@media (prefers-reduced-motion: reduce){.scanbox .aim::after{animation:none}}
+.scanbox .msg{position:absolute;left:0;right:0;bottom:10px;text-align:center;color:#fff;font-weight:600;font-size:13.5px;text-shadow:0 1px 3px #000}
+.scanbox.idle{background:var(--bg);border:2px dashed var(--line);aspect-ratio:auto;padding:22px 14px;text-align:center;color:var(--muted)}
+.prod{border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.prod h4{margin:0;font-size:16px}
+.prod .mac{display:flex;flex-wrap:wrap;gap:10px;font-size:14px}
+.unit{display:inline-flex;background:var(--bg);border-radius:9px;padding:3px;gap:2px}
+.unit button{border:0;background:none;color:var(--muted);font-weight:600;padding:6px 10px;border-radius:7px;font-size:13px}
+.unit button[aria-pressed="true"]{background:var(--surface);color:var(--ink)}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:600}
+.toggle input{width:46px;height:28px;appearance:none;-webkit-appearance:none;background:var(--line);border-radius:999px;position:relative;cursor:pointer;flex:none;transition:background .2s}
+.toggle input::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle input:checked{background:var(--good)}
+.toggle input:checked::after{transform:translateX(18px)}
+.quote{font-family:var(--display);font-size:18px;font-weight:700;line-height:1.3;margin:0}
+.quote + small{display:block;color:var(--muted);margin-top:6px}
+.offline-pill{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:var(--warn);color:#fff;font-size:11.5px;font-weight:700;vertical-align:middle}
 </style>
 
 <div class="wrap">
@@ -405,6 +433,7 @@ body.gated{padding-bottom:max(20px,env(safe-area-inset-bottom,0px))}
     </div>
     <div class="seg" id="modeSeg">
       <button data-mode="photo" aria-pressed="true">Photo</button>
+      <button data-mode="scan" aria-pressed="false">Scan</button>
       <button data-mode="label" aria-pressed="false">Label</button>
       <button data-mode="describe" aria-pressed="false">Describe</button>
       <button data-mode="manual" aria-pressed="false">Manual</button>
@@ -455,9 +484,41 @@ async function api(path, opts = {}) {
 }
 let siteURL = '';
 function useAccount(u) { me = u; who = u.name || u.username; cloud = true; LS = 'macrolens:u:' + u.username + ':'; }
+const LAST_USER = 'macrolens:lastUser';
+let offlineStart = false;
 async function initStore() {
-  try { const j = await api('/api/auth'); if (j.site) siteURL = j.site; if (j.user) useAccount(j.user); } catch (e) { initErr = e; }
+  try {
+    const j = await api('/api/auth'); if (j.site) siteURL = j.site;
+    if (j.user) { useAccount(j.user); try { localStorage.setItem(LAST_USER, JSON.stringify(j.user)); } catch (e) {} }
+    else { try { localStorage.removeItem(LAST_USER); } catch (e) {} }
+  } catch (e) {
+    initErr = e;
+    // no connection: open the last account on this device with its saved copy of the log
+    if (e && e.code === 'offline') { try { const u = JSON.parse(localStorage.getItem(LAST_USER)); if (u && u.username) { useAccount(u); offlineStart = true; } } catch (er) {} }
+  }
 }
+const cacheKey = id => LS + 'doc:' + id;
+function cacheDoc(id, data) {
+  if (!data) return;
+  const put = () => localStorage.setItem(cacheKey(id), JSON.stringify(data));
+  try { put(); } catch (e) { pruneCache(14); try { put(); } catch (er) {} }
+}
+function readCache(id) { try { return JSON.parse(localStorage.getItem(cacheKey(id))); } catch (e) { return null; } }
+function pruneCache(keepDays) {
+  const cut = 'day-' + addDays(todayKey(), -keepDays), pre = LS + 'doc:';
+  try { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && k.startsWith(pre + 'day-') && k.slice(pre.length) < cut) localStorage.removeItem(k); } } catch (e) {}
+}
+function pendingAll() { try { return JSON.parse(localStorage.getItem(LS + 'pending')) || {}; } catch (e) { return {}; } }
+function setPending(id, obj) { try { const p = pendingAll(); if (obj) p[id] = obj; else delete p[id]; localStorage.setItem(LS + 'pending', JSON.stringify(p)); } catch (e) {} }
+let offlineToastShown = false;
+function flushPending() {
+  if (!cloud) return;
+  const p = pendingAll(), ids = Object.keys(p);
+  ids.forEach(id => saveDoc(id, p[id], true));
+  return ids.length;
+}
+window.addEventListener('online', () => { offlineToastShown = false; const n = flushPending(); renderWho(); if (n) setTimeout(() => toast('Back online. Your changes synced.'), 1500); if (!sample) checkAI(); });
+window.addEventListener('offline', renderWho);
 let initErr = null, signedOutShown = false;
 function signedOut() {
   if (signedOutShown) return; signedOutShown = true;
@@ -465,31 +526,53 @@ function signedOut() {
   setTimeout(() => location.reload(), 1800);
 }
 async function getDoc(id) {
-  try { const j = await api('/api/doc?id=' + encodeURIComponent(id)); return j.data ? clone(j.data) : null; }
-  catch (e) { return null; }
+  const waiting = pendingAll()[id];
+  if (waiting) return clone(waiting); // a change made offline is newer than the server's copy
+  try { const j = await api('/api/doc?id=' + encodeURIComponent(id)); if (j.data) cacheDoc(id, j.data); return j.data ? clone(j.data) : null; }
+  catch (e) { const c = readCache(id); return c ? clone(c) : null; }
 }
 const chains = {};
-function saveDoc(id, obj) {
-  const body = JSON.stringify(obj);
+function saveDoc(id, obj, quiet) {
+  const body = JSON.stringify(obj), snap = JSON.parse(body);
+  cacheDoc(id, snap); setPending(id, snap); // kept on this device until the server has it
   chains[id] = (chains[id] || Promise.resolve()).then(async () => {
     let tries = 0;
     for (;;) {
-      try { await api('/api/doc?id=' + encodeURIComponent(id), { method: 'PUT', body }); return; }
-      catch (e) {
+      try {
+        await api('/api/doc?id=' + encodeURIComponent(id), { method: 'PUT', body });
+        if (JSON.stringify(pendingAll()[id]) === body) setPending(id, null);
+        return;
+      } catch (e) {
+        if (e && e.code === 'offline' && !navigator.onLine) throw e;
         if (e && (e.code === 'offline' || e.status >= 500) && tries++ < 2) { await new Promise(r => setTimeout(r, 1200 * tries)); continue; }
         throw e;
       }
     }
-  }).catch(e => toast(e && e.code === 'too_large' ? 'This day is too big to save. Delete a few entries.' : e && e.code === 'offline' ? 'Couldn’t save: you look offline. Try again when you’re connected.' : 'Couldn’t save that change. Try again.'));
+  }).catch(e => {
+    if (e && e.code === 'offline') { if (!offlineToastShown && !quiet) { offlineToastShown = true; toast('Saved on this phone. It syncs when you’re back online.'); } renderWho(); return; }
+    if (e && e.code === 'too_large') { setPending(id, null); toast('This day is too big to save. Delete a few entries.'); return; }
+    if (!quiet) toast('Couldn’t sync that change yet. It’s saved on this phone and will retry.');
+  });
   return chains[id];
 }
 function renderWho() {
   const first = who ? who.split(' ')[0] : '';
-  $('#who').innerHTML = cloud ? `Signed in as <b>${esc(first)}</b>` : '';
+  const waiting = cloud ? Object.keys(pendingAll()).length : 0;
+  $('#who').innerHTML = cloud ? `Signed in as <b>${esc(first)}</b>${!navigator.onLine ? '<span class="offline-pill">Offline</span>' : waiting ? '<span class="offline-pill">Syncing</span>' : ''}` : '';
 }
 async function listDays(since) {
-  try { const j = await api('/api/doc?days_since=' + encodeURIComponent(since)); return j.days || []; }
-  catch (e) { return []; }
+  const p = pendingAll();
+  const local = () => {
+    const out = {}, pre = LS + 'doc:day-';
+    try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith(pre) && k.slice(pre.length) >= since) { const d = readCache(k.slice(LS.length + 4)); if (d) out[d.date || k.slice(pre.length)] = d; } } } catch (e) {}
+    return out;
+  };
+  let days;
+  try { const j = await api('/api/doc?days_since=' + encodeURIComponent(since)); days = j.days || []; }
+  catch (e) { days = Object.values(local()); }
+  const by = {}; days.forEach(d => { if (d && d.date) by[d.date] = d; });
+  Object.keys(p).forEach(id => { if (id.startsWith('day-') && id.slice(4) >= since) by[id.slice(4)] = p[id]; });
+  return Object.values(by).sort((a, b) => a.date < b.date ? -1 : 1);
 }
 
 /* ---------- sign in / create account ---------- */
@@ -704,12 +787,17 @@ async function submitGate(create) {
 }
 function finishLogin(u) {
   useAccount(u);
+  try { localStorage.setItem(LAST_USER, JSON.stringify(u)); } catch (e) {}
   document.body.classList.remove('gated');
   $('#view-today').innerHTML = '<div class="status"><div class="spin"></div>Loading your log…</div>';
   if (gateDone) { const d = gateDone; gateDone = null; d(); }
 }
 async function logOut() {
+  if (Object.keys(pendingAll()).length && !navigator.onLine && !confirm('Some changes haven’t synced yet because you’re offline. Log out anyway and lose them?')) return;
+  try { if (pushSub) await api('/api/push', { method: 'POST', body: JSON.stringify({ action: 'unsubscribe', endpoint: pushSub.endpoint }) }); if (pushSub) await pushSub.unsubscribe(); } catch (e) {}
   try { await api('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'logout' }) }); } catch (e) {}
+  // remove this account's offline copy from the device
+  try { localStorage.removeItem(LAST_USER); for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && (k.startsWith(LS + 'doc:') || k === LS + 'pending')) localStorage.removeItem(k); } } catch (e) {}
   location.reload();
 }
 
@@ -1479,6 +1567,88 @@ function habitSettingsHTML() {
     <div class="row" style="margin-top:12px"><div class="field" style="max-width:180px"><label for="waterGoal">Water goal (glasses)</label><input type="number" id="waterGoal" min="1" max="20" value="${hc.waterGoal}"></div></div></div>`;
 }
 
+/* ---------- notifications: daily quote ---------- */
+let pushSub = null, pushKey = null, swReg = null;
+const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const myTz = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) { return ''; } };
+const b64ToBytes = b => { const p = '='.repeat((4 - b.length % 4) % 4), raw = atob((b + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(raw, c => c.charCodeAt(0)); };
+async function registerSW() {
+  if (!('serviceWorker' in navigator)) return null;
+  try { swReg = await navigator.serviceWorker.register('/sw.js'); return swReg; } catch (e) { return null; }
+}
+async function readPushState() {
+  if (!pushSupported()) return;
+  try {
+    const reg = swReg || await navigator.serviceWorker.ready;
+    pushSub = await reg.pushManager.getSubscription();
+    if (pushSub && cloud && navigator.onLine) {
+      // keep the server's copy in step (it may have been cleared, or the account switched)
+      const j = await api('/api/push', { method: 'POST', body: JSON.stringify({ action: 'status', endpoint: pushSub.endpoint, tz: myTz() }) });
+      if (!j.on) await api('/api/push', { method: 'POST', body: JSON.stringify({ action: 'subscribe', sub: pushSub.toJSON(), tz: myTz() }) });
+    }
+  } catch (e) {}
+}
+async function turnOnQuotes() {
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') return perm;
+  if (!pushKey) pushKey = (await api('/api/push')).key;
+  const reg = swReg || await navigator.serviceWorker.ready;
+  pushSub = await reg.pushManager.getSubscription() || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(pushKey) });
+  await api('/api/push', { method: 'POST', body: JSON.stringify({ action: 'subscribe', sub: pushSub.toJSON(), tz: myTz() }) });
+  return 'granted';
+}
+async function turnOffQuotes() {
+  if (!pushSub) return;
+  const ep = pushSub.endpoint;
+  try { await pushSub.unsubscribe(); } catch (e) {}
+  pushSub = null;
+  await api('/api/push', { method: 'POST', body: JSON.stringify({ action: 'unsubscribe', endpoint: ep }) }).catch(() => {});
+}
+function notifHTML() {
+  const k = deviceKind();
+  let body;
+  if (!pushSupported()) {
+    if (k === 'ios' && !isInstalled()) body = `<div class="verdict"><b>On iPhone, add the app to your Home Screen first.</b><p class="hint" style="margin:4px 0 0">Apple only lets Home Screen apps send notifications. Add it, open it from the new icon, then come back here.</p></div><button class="btn" type="button" id="nHs" style="margin-top:10px">Add to Home Screen</button>`;
+    else if (k === 'inapp' || k === 'inapp-ios') body = `<p class="hint">Notifications don’t work inside other apps. Open this link in ${k === 'inapp-ios' ? 'Safari' : 'Chrome'}.</p>`;
+    else body = `<p class="hint">This browser can’t show notifications. Try Chrome, Edge or Safari.</p>`;
+  } else if (Notification.permission === 'denied') {
+    body = `<div class="verdict warn"><b>Notifications are blocked for this site.</b><p class="hint" style="margin:4px 0 0">${k === 'ios' ? 'Open your iPhone’s Settings → Notifications → Macros and turn on Allow Notifications.' : k === 'android' ? 'In Chrome, tap the icon left of the address, then Permissions → Notifications → Allow. For the Home Screen app: long-press its icon → App info → Notifications.' : 'Click the icon left of the address bar and allow notifications.'} Then come back here.</p></div>`;
+  } else {
+    body = `<label class="toggle" for="nQuote"><span>Daily quote<br><small class="hint" style="font-weight:400">Around 9 in the morning</small></span><input type="checkbox" id="nQuote" ${pushSub ? 'checked' : ''}></label>
+      <p class="err" id="nErr" role="alert" style="margin:8px 0 0"></p>
+      ${pushSub ? '<button class="btn ghost" type="button" id="nTest" style="margin-top:4px">Send me one now</button>' : ''}`;
+  }
+  return `<div class="card"><h3>Notifications</h3><p class="hint" style="margin:0 0 12px">A quote to start your day, from Seneca and Marcus Aurelius to Kipchoge and Simone Biles.</p>${body}</div>
+    <div class="card"><h3>Today’s quote</h3><p class="quote" id="qText">…</p><small id="qWho"></small></div>`;
+}
+async function wireNotif() {
+  const q = id => document.getElementById(id);
+  if (q('nHs')) q('nHs').onclick = () => openHomeScreen(false);
+  if (q('qText')) {
+    try { const j = await api('/api/push?tz=' + encodeURIComponent(myTz())); pushKey = j.key; if (j.quote && q('qText')) { q('qText').textContent = '“' + j.quote.text + '”'; q('qWho').textContent = '— ' + j.quote.who + (j.quote.when ? ', ' + j.quote.when : ''); } }
+    catch (e) { if (q('qText')) q('qText').textContent = 'Connect to the internet to see today’s quote.'; }
+  }
+  const box = q('nQuote');
+  if (box) box.onchange = async () => {
+    q('nErr').textContent = ''; box.disabled = true;
+    try {
+      if (box.checked) {
+        const r = await turnOnQuotes();
+        if (r === 'granted') toast('Daily quote is on');
+        else { box.checked = false; if (r === 'denied') { renderSettings(); return; } }
+      } else { await turnOffQuotes(); toast('Daily quote is off'); }
+    } catch (e) { box.checked = !!pushSub; q('nErr').textContent = (e && e.text) || 'Couldn’t change that. Check your connection and try again.'; }
+    box.disabled = false;
+    const sec = document.querySelector('[data-sec="notif"]'); if (sec) { sec.innerHTML = notifHTML(); wireNotif(); }
+  };
+  if (q('nTest')) q('nTest').onclick = async () => {
+    q('nTest').disabled = true;
+    try { await api('/api/push', { method: 'POST', body: JSON.stringify({ action: 'test', tz: myTz() }) }); toast('Sent. It should pop up in a few seconds.'); }
+    catch (e) { q('nErr').textContent = e.text || 'Couldn’t send it. Try again.'; }
+    q('nTest').disabled = false;
+  };
+}
+
 /* ---------- sign-in & sharing ---------- */
 function signInCard(compact) {
   return `<div class="signin" role="region" aria-label="Sign in">
@@ -1573,7 +1743,8 @@ function renderSettings() {
   const ROWS = [
     ['Preferences', [
       ['appearance', 'Appearance', P + ' · ' + ({ dark: 'Dark', light: 'Light', system: 'Auto' }[theme.mode] || 'Dark'), ic('#8b5cf6', '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16Z" fill="#fff"/>')],
-      ['habits', 'Habits', hcN + ' tracked', ic('#16a34a', '<path d="M5 12.5l4.5 4.5L19 7.5"/>')]]],
+      ['habits', 'Habits', hcN + ' tracked', ic('#16a34a', '<path d="M5 12.5l4.5 4.5L19 7.5"/>')],
+      ['notif', 'Notifications', pushSub ? 'Daily quote on' : 'Off', ic('#f43f5e', '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15Z"/><path d="M10 20a2 2 0 0 0 4 0"/>')]]],
     ['Nutrition', [
       ['targets', 'Daily targets', fmt(T.cal) + ' Cal · ' + T.p + 'g P', ic('#ef4444', '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".6" fill="#fff"/>')],
       ['logview', 'Food log layout', { meals: 'Meals', time: 'Time of day', timeline: 'Timeline', custom: 'Custom meals' }[logCfg().mode], ic('#ec4899', '<circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/>')],
@@ -1588,13 +1759,14 @@ function renderSettings() {
     return;
   }
   const title = ROWS.flatMap(r => r[1]).find(r => r[0] === sub);
-  const secs = { appearance: appearanceHTML(), habits: habitSettingsHTML(), targets: secTargets, logview: logSettingsHTML(), training: secTraining, account: secAccount };
+  const secs = { appearance: appearanceHTML(), habits: habitSettingsHTML(), notif: notifHTML(), targets: secTargets, logview: logSettingsHTML(), training: secTraining, account: secAccount };
   v.innerHTML = `<button class="ios-back" id="setBack">‹ Settings</button><h1 class="ios-title">${esc(title ? title[1] : 'Settings')}</h1>
     ${Object.entries(secs).map(([k, h]) => `<div data-sec="${k}" ${k === sub ? '' : 'hidden'}>${h}</div>`).join('')}`;
   $('#setBack').onclick = () => { S.setSub = null; renderSettings(); window.scrollTo(0, 0); };
   wireAccount();
   wireAppearance();
   wireLogSettings();
+  if (sub === 'notif') wireNotif();
   const hc = habitCfg();
   $('#habSet').onclick = e => { const b = e.target.closest('[data-hk]'); if (!b) return; const k = b.dataset.hk; hc.on = hc.on.includes(k) ? hc.on.filter(x => x !== k) : [...hc.on, k]; b.setAttribute('aria-pressed', hc.on.includes(k)); S.settings.habits = { ...hc }; saveDoc('settings', S.settings); };
   $('#waterGoal').onchange = e => { hc.waterGoal = Math.max(1, Math.min(20, +e.target.value || 8)); S.settings.habits = { ...hc }; saveDoc('settings', S.settings); toast('Water goal saved'); };
@@ -1651,16 +1823,17 @@ function openSheet(meal) {
   sheetReturn = document.activeElement;
   $('#shade').hidden = false; document.body.style.overflow = 'hidden';
   setTimeout(() => { const sh = $('.sheet'); if (sh) sh.focus({ preventScroll: true }); }, 0);
-  setMode(!sampleChecked || (sample && imgOK) ? 'photo' : sample ? 'describe' : 'manual');
+  setMode(!sampleChecked || (sample && imgOK) ? 'photo' : sample ? 'describe' : 'scan');
 }
 let sheetReturn = null;
-function closeSheet() { if (ctl) ctl.abort(); $('#shade').hidden = true; document.body.style.overflow = ''; const r = sheetReturn; sheetReturn = null; if (r && document.contains(r) && r.focus) r.focus({ preventScroll: true }); }
+function closeSheet() { stopScan(); if (ctl) ctl.abort(); $('#shade').hidden = true; document.body.style.overflow = ''; const r = sheetReturn; sheetReturn = null; if (r && document.contains(r) && r.focus) r.focus({ preventScroll: true }); }
 $('#fab').onclick = () => { if (S.tab !== 'today') { S.date = todayKey(); showTab('today'); loadDay(S.date); } openSheet(); };
 $('#closeSheet').onclick = closeSheet;
 $('#shade').addEventListener('click', e => { if (e.target.id === 'shade') closeSheet(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#shade').hidden) closeSheet(); });
 $('#modeSeg').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (b && !busy) { if (b.dataset.mode !== mode && photo) { if (photoURL) URL.revokeObjectURL(photoURL); photo = null; photoURL = null; } review = null; aiErr = ''; setMode(b.dataset.mode); } });
 function setMode(m) {
+  if (m !== 'scan') stopScan();
   mode = m;
   document.querySelectorAll('#modeSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m));
   renderSheet();
@@ -1685,6 +1858,8 @@ function renderSheet() {
     $('#go').onclick = () => runAI(mode, $('#note').value.trim());
     $('#drop').ondragover = e => e.preventDefault();
     $('#drop').ondrop = e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) setPhoto(f); };
+  } else if (mode === 'scan') {
+    renderScan();
   } else if (mode === 'describe') {
     if (!sample) { b.innerHTML = sampleChecked ? aiBlockedHTML(false) : `<div class="status"><div class="spin"></div>Getting ready…</div>`; if (sampleChecked) wireAiBlocked(); return; }
     b.innerHTML = `<div class="field"><label for="desc">What did you eat?</label><textarea id="desc" rows="4" placeholder="e.g. Chipotle bowl: white rice, chicken, black beans, mild salsa, cheese, guac"></textarea></div>
@@ -1864,15 +2039,142 @@ function addEntries(list) {
   toast(`Logged ${made.length} item${made.length === 1 ? '' : 's'} · ${fmt(made.reduce((a, m) => a + m.cal, 0))} Cal`);
 }
 
+/* ---------- barcode scanner (Open Food Facts) ---------- */
+let scanStream = null, scanTimer = null, scanProduct = null, scanState = 'idle', scanMsg = '', detector = null;
+const BC_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e'];
+async function getDetector() {
+  if (detector) return detector;
+  if ('BarcodeDetector' in window) {
+    try { const f = await window.BarcodeDetector.getSupportedFormats(); if (BC_FORMATS.some(x => f.includes(x))) { detector = new window.BarcodeDetector({ formats: BC_FORMATS.filter(x => f.includes(x)) }); return detector; } } catch (e) {}
+  }
+  // Safari and Firefox: a free scanning library, loaded the first time someone scans
+  const m = await import('https://cdn.jsdelivr.net/npm/barcode-detector@3.2.2/dist/es/ponyfill.js/+esm');
+  detector = new m.BarcodeDetector({ formats: BC_FORMATS });
+  return detector;
+}
+function stopScan() {
+  clearTimeout(scanTimer); scanTimer = null;
+  if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+  if (scanState === 'camera') scanState = 'idle';
+}
+function scanUnits(P) {
+  const hasServ = !!(P.perServing || (P.servingG && P.per100));
+  return { hasServ, hasG: !!P.per100 };
+}
+function scanMacros(P, amt, unit) {
+  if (unit === 'serv') {
+    const base = P.perServing || { cal: P.per100.cal * P.servingG / 100, p: P.per100.p * P.servingG / 100, c: P.per100.c * P.servingG / 100, f: P.per100.f * P.servingG / 100 };
+    return { cal: base.cal * amt, p: base.p * amt, c: base.c * amt, f: base.f * amt, grams: P.servingG ? P.servingG * amt : 0 };
+  }
+  return { cal: P.per100.cal * amt / 100, p: P.per100.p * amt / 100, c: P.per100.c * amt / 100, f: P.per100.f * amt / 100, grams: amt };
+}
+function renderScan() {
+  const b = $('#sheetBody');
+  if (!cloud) { b.innerHTML = `<p class="hint">Sign in to scan barcodes.</p>`; return; }
+  let top;
+  if (scanState === 'camera') top = `<div class="scanbox"><video id="scanVid" playsinline muted autoplay></video><div class="aim" aria-hidden="true"></div><div class="msg">Line up the barcode inside the box</div></div>`;
+  else if (scanState === 'starting') top = `<div class="scanbox idle"><div class="status"><div class="spin"></div>Opening the camera…</div></div>`;
+  else if (scanState === 'looking') top = `<div class="scanbox idle"><div class="status"><div class="spin"></div>Looking up ${esc(scanMsg)}…</div></div>`;
+  else if (scanState === 'found' && scanProduct) top = '';
+  else top = `<button type="button" class="scanbox idle" id="scanStart" style="width:100%;cursor:pointer"><b style="font-family:var(--display);font-size:19px;color:var(--ink)">Scan a barcode</b><span style="display:block;margin-top:6px">Opens your camera. Point it at the barcode on any packaged food.</span></button>`;
+  let mid = '';
+  if (scanState === 'error' || scanState === 'missing') mid = `<div class="verdict ${scanState === 'error' ? 'warn' : ''}">${scanMsg}</div>`;
+  if (scanState === 'missing') mid += `<div class="row" style="margin-top:8px">${sample && imgOK ? '<button class="btn" type="button" id="scanLabel">Snap the label instead</button>' : ''}<button class="btn ghost" type="button" id="scanManual">Enter it manually</button></div>`;
+  if (scanState === 'found' && scanProduct) {
+    const P = scanProduct, U = scanUnits(P);
+    const m = scanMacros(P, P.amt, P.unit);
+    mid = `<div class="prod"><div><h4>${esc(P.name)}</h4>${P.brand ? `<small class="hint">${esc(P.brand)}</small>` : ''}</div>
+      ${P.serving ? `<small class="hint" style="margin:0">1 serving = ${esc(P.serving)}</small>` : ''}
+      <div class="row" style="align-items:flex-end"><div class="field" style="max-width:130px"><label for="scAmt">${P.unit === 'serv' ? 'Servings' : 'Grams'}</label><input type="number" id="scAmt" inputmode="decimal" min="0" step="${P.unit === 'serv' ? '0.25' : '1'}" value="${P.amt}"></div>
+        ${U.hasServ && U.hasG ? `<div class="unit" role="group" aria-label="Amount in"><button type="button" data-unit="serv" aria-pressed="${P.unit === 'serv'}">Servings</button><button type="button" data-unit="g" aria-pressed="${P.unit === 'g'}">Grams</button></div>` : ''}</div>
+      <div class="mac num"><span><b>${fmt(m.cal)}</b> Cal</span><span style="color:var(--pro)">P ${fmt(m.p)}</span><span style="color:var(--carb)">C ${fmt(m.c)}</span><span style="color:var(--fat)">F ${fmt(m.f)}</span></div>
+      <p class="hint" style="margin:0">From Open Food Facts, a free database anyone can edit. If the numbers look off, check the label.</p>
+      <div class="row"><button class="btn" type="button" id="scLog">Add to log</button><button class="btn ghost" type="button" id="scAgain">Scan another</button></div></div>`;
+  }
+  b.innerHTML = top + mid + `<form class="row" id="bcForm" style="align-items:flex-end"><div class="field"><label for="bcIn">Or type the barcode number</label><input type="text" id="bcIn" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="e.g. 041196910759"></div><button class="btn ghost" type="submit">Look up</button></form>`;
+  if ($('#scanStart')) $('#scanStart').onclick = startScan;
+  if ($('#scanLabel')) $('#scanLabel').onclick = () => { scanState = 'idle'; setMode('label'); };
+  if ($('#scanManual')) $('#scanManual').onclick = () => { scanState = 'idle'; setMode('manual'); };
+  if ($('#scAgain')) $('#scAgain').onclick = () => { scanProduct = null; startScan(); };
+  if ($('#scAmt')) $('#scAmt').onchange = e => { scanProduct.amt = Math.max(0, +e.target.value || 0); renderScan(); };
+  b.querySelectorAll('[data-unit]').forEach(x => x.onclick = () => {
+    const P = scanProduct; if (P.unit === x.dataset.unit) return;
+    const g = scanMacros(P, P.amt, P.unit).grams;
+    P.unit = x.dataset.unit; P.amt = P.unit === 'g' ? Math.round(g || P.servingG || 100) : (P.servingG && g ? r1(g / P.servingG) : 1);
+    renderScan();
+  });
+  if ($('#scLog')) $('#scLog').onclick = () => {
+    const P = scanProduct, m = scanMacros(P, P.amt, P.unit);
+    if (!(m.cal > 0 || m.p > 0)) { toast('Set an amount first.'); return; }
+    addEntries([{ name: P.name, grams: m.grams, cal: m.cal, p: m.p, c: m.c, f: m.f, src: 'barcode' }]);
+    scanProduct = null; scanState = 'idle';
+  };
+  $('#bcForm').onsubmit = e => { e.preventDefault(); const v = $('#bcIn').value.replace(/\D/g, ''); if (v.length < 6) { toast('Type the numbers under the barcode.'); return; } stopScan(); lookupBarcode(v); };
+  const vid = $('#scanVid'); if (vid && scanStream) { vid.srcObject = scanStream; vid.play().catch(() => {}); }
+}
+async function startScan() {
+  stopScan(); scanProduct = null;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    scanState = 'error'; scanMsg = deviceKind().startsWith('inapp') ? 'The camera doesn’t work inside other apps. Open this link in Safari or Chrome, or type the number below.' : 'This browser can’t open the camera. Type the number under the barcode instead.'; renderScan(); return;
+  }
+  scanState = 'starting'; renderScan();
+  let det;
+  try { det = await getDetector(); }
+  catch (e) { scanState = 'error'; scanMsg = 'The scanner couldn’t load. Check your connection, or type the number under the barcode.'; renderScan(); return; }
+  try { scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }); }
+  catch (e) {
+    const k = deviceKind();
+    scanState = 'error';
+    scanMsg = e && e.name === 'NotAllowedError'
+      ? `<b>Camera access is off.</b><p class="hint" style="margin:4px 0 0">${k === 'ios' ? 'On iPhone: Settings → Apps → Safari → Camera → Allow (or Settings → Macros if you use the Home Screen app). Then tap Scan again.' : k === 'android' ? 'In Chrome, tap the icon left of the address → Permissions → Camera → Allow. Then tap Scan again.' : 'Allow camera access for this site in your browser, then tap Scan again.'} You can also type the number below.</p>`
+      : 'Couldn’t open the camera. Type the number under the barcode instead.';
+    renderScan(); return;
+  }
+  if ($('#shade').hidden || mode !== 'scan') { stopScan(); return; }
+  scanState = 'camera'; renderScan();
+  const vid = $('#scanVid');
+  const tick = async () => {
+    if (!scanStream || !vid) return;
+    try {
+      if (vid.readyState >= 2) {
+        const codes = await det.detect(vid);
+        const hit = codes && codes.find(c => /^\d{6,14}$/.test(c.rawValue || ''));
+        if (hit) { if (navigator.vibrate) navigator.vibrate(40); stopScan(); lookupBarcode(hit.rawValue); return; }
+      }
+    } catch (e) {}
+    scanTimer = setTimeout(tick, 180);
+  };
+  tick();
+}
+async function lookupBarcode(code) {
+  scanState = 'looking'; scanMsg = code; renderScan();
+  try {
+    const j = await api('/api/food?barcode=' + encodeURIComponent(code));
+    if (mode !== 'scan') return;
+    if (!j.found) {
+      scanState = 'missing';
+      scanMsg = j.reason === 'no_nutrition' ? `<b>${esc(j.name || 'This product')}</b> is in the database, but without nutrition numbers. Snap the Nutrition Facts label instead.` : `<b>This product isn’t in the food database yet</b> (${esc(code)}). Snap the Nutrition Facts label and the app reads it for you.`;
+    } else {
+      const P = j.product, U = scanUnits(P);
+      scanProduct = { ...P, unit: U.hasServ ? 'serv' : 'g', amt: U.hasServ ? 1 : 100 };
+      scanState = 'found';
+    }
+  } catch (e) {
+    scanState = 'error'; scanMsg = esc(e.text || 'Couldn’t look that up. Try again.');
+  }
+  renderScan();
+}
+
 /* ---------- boot ---------- */
 renderToday();
 (async () => {
   await initStore();
+  if (offlineStart) toast('You’re offline. Showing what’s saved on this phone.');
   if (!cloud) await accountGate();
   storeReady = true;
   renderWho();
   const [st, w] = await Promise.all([getDoc('settings'), getDoc('weights')]);
-  if (st && st.targets) S.settings = { kind: 'settings', targets: { ...DEFAULT_TARGETS, ...st.targets }, recent: Array.isArray(st.recent) ? st.recent : [], profile: st.profile || null, cycle: st.cycle || null, theme: st.theme || null, habits: st.habits || null, log: st.log || null, saved: Array.isArray(st.saved) ? st.saved : [], welcome: WELCOMES[st.welcome] ? st.welcome : null };
+  if (st && st.targets) S.settings = { ...st, kind: 'settings', targets: { ...DEFAULT_TARGETS, ...st.targets }, recent: Array.isArray(st.recent) ? st.recent : [], profile: st.profile || null, cycle: st.cycle || null, theme: st.theme || null, habits: st.habits || null, log: st.log || null, saved: Array.isArray(st.saved) ? st.saved : [], welcome: WELCOMES[st.welcome] ? st.welcome : null };
   if (S.settings.welcome) rememberWelcome(S.settings.welcome);
   if (st && st.theme) setTheme({ ...DEFAULT_THEME, ...st.theme }, false);
   if (!(st && st.targets)) S.needsSetup = true;
@@ -1881,6 +2183,10 @@ renderToday();
   if (S.tab !== 'today') showTab(S.tab);
   checkAI();
   if (!S.needsSetup) maybeAskHomeScreen();
+  if (navigator.onLine) flushPending();
+  pruneCache(21);
+  await registerSW();
+  readPushState();
 })();
 })();
 </script>
