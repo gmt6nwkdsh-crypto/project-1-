@@ -467,6 +467,17 @@ body.gated{padding-bottom:max(20px,env(safe-area-inset-bottom,0px))}
 .recap{border:1px solid color-mix(in srgb,var(--accent) 45%,transparent)}
 .recap .stats{margin-top:8px}
 .share-row{display:flex;justify-content:flex-end;margin-top:-8px}
+/* friends */
+.fr{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.fr:first-of-type{border-top:0}
+.fr .avatar{width:42px;height:42px;font-size:17px}
+.fr small{color:var(--muted);display:block}
+.fr .st{display:flex;gap:10px;flex-wrap:wrap;font-size:13px;margin-top:3px}
+.fr .st b{font-family:var(--display);font-size:15px}
+.fr .ok{color:var(--good);font-weight:700}
+.fr .acts{display:flex;gap:6px;align-items:center}
+.nudged{border-left:3px solid var(--good)}
+nav.tabs .in{grid-template-columns:1fr 1fr auto 1fr 1fr!important}
 .offline-pill{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:var(--warn);color:#fff;font-size:11.5px;font-weight:700;vertical-align:middle}
 </style>
 
@@ -491,8 +502,9 @@ body.gated{padding-bottom:max(20px,env(safe-area-inset-bottom,0px))}
 <nav class="tabs"><div class="in">
   <button class="tab" data-tab="today" aria-current="page">Today</button>
   <button class="tab" data-tab="weight">Weight</button>
-  <button class="fab" id="fab">+ Log food</button>
+  <button class="fab" id="fab" aria-label="Log food">+ Log</button>
   <button class="tab" data-tab="history">Insights</button>
+  <button class="tab" data-tab="friends">Friends</button>
 </div></nav>
 
 <div class="shade" id="shade" hidden>
@@ -951,7 +963,7 @@ function renderToday() {
     const es = sorted.filter(e => g.match(e));
     const mt = totals(es);
     html += `<div class="meal"><div class="meal-h"><h3>${esc(g.name)}${g.sub ? ` <span class="gsub">${g.sub}</span>` : ''}</h3><span class="tot num">${es.length ? fmt(mt.cal) + ' Cal' : ''}${es.length >= 2 ? `<button class="savebtn" data-savemeal="${g.key}" aria-label="Save ${esc(g.name)} as a meal">Save</button>` : ''}</span></div>`;
-    if (!es.length && gi === 0 && !S.day.entries.length) html += `<div class="empty-note">Nothing logged yet. Tap <b>+ Log food</b> and snap a photo of your plate — the AI estimates every item's calories and macros, and you can adjust before saving.</div>`;
+    if (!es.length && gi === 0 && !S.day.entries.length) html += `<div class="empty-note">Nothing logged yet. Tap <b>+ Log</b> and snap a photo of your plate — the AI estimates every item's calories and macros, and you can adjust before saving.</div>`;
     for (const e of es) {
       html += `<div class="swipe" data-sw="${esc(e.id)}"><div class="sw-bg" aria-hidden="true"><span class="l">Duplicate</span><span class="r">Delete</span></div><div class="entry"><div class="nm" data-edit="${esc(e.id)}" role="button" tabindex="0" aria-label="Edit ${esc(e.name)}"><div>${esc(e.name)}</div><small class="num">${showT ? fmtTime(entryMin(e)) + ' · ' : ''}${e.grams ? fmt(e.grams) + 'g · ' : ''}P ${fmt(e.p)} · C ${fmt(e.c)} · F ${fmt(e.f)}${e.src === 'photo' ? ' · from photo' : ''}</small></div>
         <span class="kc num">${fmt(e.cal)}</span><button class="del" data-del="${esc(e.id)}" aria-label="Delete ${esc(e.name)}">×</button></div></div>${S.editId === e.id ? editorHTML(e, L) : ''}`;
@@ -1013,7 +1025,7 @@ function saveMealGroup(key) {
   const name = items.slice(0, 2).map(i => i.name).join(' + ') + (items.length > 2 ? ` + ${items.length - 2} more` : '');
   S.settings.saved = [{ id: Date.now().toString(36), name, items }, ...(S.settings.saved || [])].slice(0, 30);
   saveDoc('settings', S.settings);
-  toast('Saved. Find it under + Log food → Foods.');
+  toast('Saved. Find it under + Log → Foods.');
 }
 
 /* ---------- Food log layout: meals, time of day, timeline, or custom meals ---------- */
@@ -1073,7 +1085,7 @@ function daylineHTML(L, sorted) {
       <line x1="0" x2="${W}" y1="${H - pb}" y2="${H - pb}" stroke="var(--line)"/>${bars}${ticks}
       ${nowX ? `<line x1="${nowX}" x2="${nowX}" y1="${pt}" y2="${H - pb}" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="3 3"/>` : ''}</svg></div>
     ${stats}
-    ${sorted.length ? `<div class="dl-rail">${rail}</div>` : `<div class="empty-note">Nothing logged yet. Tap <b>+ Log food</b> and set the time you ate; every entry lands at its exact minute on this 24-hour rail.</div>`}
+    ${sorted.length ? `<div class="dl-rail">${rail}</div>` : `<div class="empty-note">Nothing logged yet. Tap <b>+ Log</b> and set the time you ate; every entry lands at its exact minute on this 24-hour rail.</div>`}
     <button class="addmeal" data-add="all">+ Add food at ${fmtTime(isToday ? nowM : 720)}</button></div>`;
 }
 const blockOf = min => { const h = (((min % 1440) + 1440) % 1440) / 60; return (TIME_BLOCKS.find(b => h >= b[2] && h < b[3]) || TIME_BLOCKS[0])[0]; };
@@ -1606,6 +1618,55 @@ function logStreak(isLogged, t) {
     break;
   }
   return { days, frozen };
+}
+
+/* ---------- Friends: streaks and protein days, never food or weight ---------- */
+let FR = null;
+async function renderFriends() {
+  const v = $('#view-friends') || (() => { const x = document.createElement('section'); x.id = 'view-friends'; x.className = 'wrap'; $('#view-settings').after(x); return x; })();
+  if (!FR) v.innerHTML = '<div class="status"><div class="spin"></div>Loading friends…</div>';
+  try { FR = await api('/api/friends?tz=' + encodeURIComponent(myTz())); }
+  catch (e) { if (!FR) { v.innerHTML = `<div class="card"><p class="hint">${e.code === 'offline' ? 'Connect to the internet to see your friends.' : esc(e.text || 'Couldn’t load friends.')}</p></div>`; return; } }
+  if (S.tab !== 'friends') return;
+  const share = S.settings.friendsShare !== false;
+  const av = n => `<span class="avatar" aria-hidden="true">${esc((n || '?').trim()[0] || '?').toUpperCase()}</span>`;
+  const row = f => {
+    let st;
+    if (f.private) st = '<small>Keeps their stats private</small>';
+    else st = `<div class="st num"><span><b>${f.streak}</b> day streak</span>${f.proteinDays7 != null ? `<span><b>${f.proteinDays7}/7</b> protein days</span>` : ''}<span class="${f.loggedToday ? 'ok' : ''}">${f.loggedToday ? 'Logged today' : 'Not logged yet today'}</span></div>`;
+    const canNudge = !f.private && !f.loggedToday && !f.nudged;
+    return `<div class="fr">${av(f.name)}<div><b>${esc(f.name)}</b><small>@${esc(f.username)}</small>${st}</div>
+      <div class="acts">${f.nudged ? '<small>Nudged</small>' : canNudge ? `<button class="btn sm" type="button" data-nudge="${esc(f.username)}">Nudge</button>` : ''}<button class="del" type="button" data-unfriend="${esc(f.username)}" aria-label="Remove ${esc(f.name)}">×</button></div></div>`;
+  };
+  v.innerHTML = `<h1 class="ios-title">Friends</h1>
+    ${FR.nudgedBy && FR.nudgedBy.length ? `<div class="verdict nudged"><b>${esc(FR.nudgedBy.join(', '))} nudged you today.</b> Log something to keep your streak going.</div>` : ''}
+    ${FR.incoming.length ? `<div class="card"><h3>Friend requests</h3>${FR.incoming.map(f => `<div class="fr">${av(f.name)}<div><b>${esc(f.name)}</b><small>@${esc(f.username)}</small></div><div class="acts"><button class="btn sm" type="button" data-accept="${esc(f.username)}">Accept</button><button class="btn ghost sm" type="button" data-decline="${esc(f.username)}">Decline</button></div></div>`).join('')}</div>` : ''}
+    <div class="card"><h3>Your friends</h3>${FR.friends.length ? FR.friends.map(row).join('') : '<p class="hint" style="margin:0">Add friends to see each other’s logging streaks and protein days, and nudge each other when someone hasn’t logged yet.</p>'}
+      ${FR.outgoing.length ? `<p class="sec-label" style="margin-top:12px">Waiting for them to accept</p>${FR.outgoing.map(f => `<div class="fr">${av(f.name)}<div><b>${esc(f.name)}</b><small>@${esc(f.username)}</small></div><div class="acts"><button class="btn ghost sm" type="button" data-decline="${esc(f.username)}">Cancel</button></div></div>`).join('')}` : ''}</div>
+    <div class="card"><h3>Add a friend</h3>
+      <form class="row" id="frForm" style="align-items:flex-end"><div class="field"><label for="frUser">Their username</label><input type="text" id="frUser" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="25" placeholder="@username"></div><button class="btn" type="submit">Send request</button></form>
+      <p class="err" id="frErr" role="alert" style="margin:6px 0 0"></p>
+      <p class="hint">Your username is <b>@${esc(FR.me.username)}</b>. Friends need their own account. Send them the app link from Settings → Account.</p></div>
+    <div class="card"><h3>What friends can see</h3>
+      <label class="toggle" for="frShare"><span>Share my streak and protein days</span><input type="checkbox" id="frShare" ${share ? 'checked' : ''}></label>
+      <p class="hint">Friends only ever see your logging streak, how many days you hit protein this week, and whether you’ve logged today. Never your food, calories, weight or photos.</p></div>`;
+  const post = (action, username) => api('/api/friends', { method: 'POST', body: JSON.stringify({ action, username }) });
+  $('#frForm').onsubmit = async e => {
+    e.preventDefault(); $('#frErr').textContent = '';
+    const u = $('#frUser').value.trim(); if (!u) return;
+    try { const j = await post('add', u); toast(j.status === 'accepted' ? `You and ${j.name} are now friends` : `Request sent to ${j.name}`); renderFriends(); }
+    catch (er) { $('#frErr').textContent = er.text || 'Couldn’t send that. Try again.'; }
+  };
+  v.querySelectorAll('[data-accept]').forEach(b => b.onclick = async () => { try { const j = await post('accept', b.dataset.accept); toast(`You and ${j.name} are now friends`); } catch (er) { toast(er.text || 'Couldn’t accept. Try again.'); } renderFriends(); });
+  v.querySelectorAll('[data-decline]').forEach(b => b.onclick = async () => { try { await post('decline', b.dataset.decline); } catch (er) {} renderFriends(); });
+  v.querySelectorAll('[data-unfriend]').forEach(b => b.onclick = async () => { if (!confirm(`Remove @${b.dataset.unfriend} from your friends?`)) return; try { await post('remove', b.dataset.unfriend); toast('Removed'); } catch (er) { toast(er.text || 'Couldn’t remove. Try again.'); } renderFriends(); });
+  v.querySelectorAll('[data-nudge]').forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    try { const j = await post('nudge', b.dataset.nudge); toast(j.delivered ? 'Nudge sent' : 'Nudge saved. They’ll see it next time they open the app.'); }
+    catch (er) { toast(er.text || 'Couldn’t nudge. Try again.'); }
+    renderFriends();
+  });
+  $('#frShare').onchange = e => { S.settings.friendsShare = e.target.checked; saveDoc('settings', S.settings); toast(e.target.checked ? 'Friends can see your streak' : 'Your stats are private'); };
 }
 
 /* ---------- Week ---------- */
@@ -2143,12 +2204,13 @@ function showTab(tab) {
   S.tab = tab;
   document.querySelectorAll('.tab').forEach(b => b.dataset.tab === tab ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
   tab === 'settings' ? $('#gearBtn').setAttribute('aria-current', 'page') : $('#gearBtn').removeAttribute('aria-current');
-  ['today', 'weight', 'settings', 'history'].forEach(t => { const v = $('#view-' + t); if (v) v.hidden = t !== tab; });
+  ['today', 'weight', 'settings', 'history', 'friends'].forEach(t => { const v = $('#view-' + t); if (v) v.hidden = t !== tab; });
   $('#datenav').hidden = tab !== 'today';
   if (tab === 'today') renderToday();
   if (tab === 'weight') renderWeight();
   if (tab === 'settings') renderSettings();
   if (tab === 'history') renderHistory();
+  if (tab === 'friends') renderFriends();
   window.scrollTo(0, 0);
 }
 
