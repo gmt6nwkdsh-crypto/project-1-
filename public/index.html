@@ -346,6 +346,25 @@ body.gated{padding-bottom:max(20px,env(safe-area-inset-bottom,0px))}
 .wl-pick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .wl-pick button{border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:10px 6px;font-weight:600;font-size:13.5px;min-height:44px}
 .wl-pick button[aria-pressed="true"]{border:2px solid var(--accent);padding:9px 5px}
+.hs-shade{position:fixed;inset:0;z-index:25;background:var(--shade);display:flex;align-items:flex-end;justify-content:center;animation:wlFade .2s ease-out both}
+.hs{background:var(--surface);width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;animation:hsUp .28s cubic-bezier(.2,.8,.2,1) both;max-height:92svh;overflow:auto;overscroll-behavior:contain}
+@keyframes hsUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.hs-top{display:flex;gap:14px;align-items:center}
+.hs-top img{width:60px;height:60px;border-radius:14px;flex:none}
+.hs h2{margin:0;font-family:var(--display);font-weight:900;font-stretch:78%;font-size:25px;line-height:1.05}
+.hs p{margin:0;color:var(--muted);font-size:15px;line-height:1.45}
+.hs ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;counter-reset:hs}
+.hs li{display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:center;font-size:15.5px;line-height:1.35;counter-increment:hs}
+.hs li::before{content:counter(hs);width:30px;height:30px;border-radius:50%;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;font-weight:700;font-size:14px}
+.hs-ic{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:7px;background:var(--bg);border:1px solid var(--line);vertical-align:-8px;margin:0 2px}
+.hs-ic svg{width:17px;height:17px;stroke:var(--accent);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hs-acts{display:flex;flex-direction:column;gap:4px}
+.hs-acts .btn{padding:15px;font-size:16.5px;border-radius:14px;width:100%}
+.hs-acts .quiet{background:none;color:var(--ink);font-weight:600;padding:11px}
+.hs-acts .never{background:none;border:0;color:var(--muted);font-weight:500;font-size:14px;padding:8px}
+.hs-arrow{position:fixed;left:50%;bottom:calc(6px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:26;color:var(--ink);font-size:28px;animation:hsBob 1.2s ease-in-out infinite;pointer-events:none}
+@keyframes hsBob{50%{transform:translate(-50%,6px)}}
+@media (prefers-reduced-motion: reduce){.hs,.hs-shade{animation:none}.hs-arrow{animation:none}}
 @media (prefers-reduced-motion: reduce){.wl *{animation-duration:1ms!important;animation-delay:0s!important}}
 </style>
 
@@ -479,6 +498,77 @@ async function accountGate() {
   document.body.classList.add('gated');
   return new Promise(res => { gateDone = res; renderWelcome($('#view-today')); });
 }
+
+/* ---------- Add to Home Screen ---------- */
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
+window.addEventListener('appinstalled', () => { installEvt = null; hsSet({ never: true }); closeHomeScreen(); toast('Added to your Home Screen'); });
+const hsGet = () => { try { return JSON.parse(localStorage.getItem('macrolens:a2hs')) || {}; } catch (e) { return {}; } };
+const hsSet = v => { try { localStorage.setItem('macrolens:a2hs', JSON.stringify({ ...hsGet(), ...v })); } catch (e) {} };
+function isInstalled() { return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; }
+function deviceKind() {
+  const ua = navigator.userAgent || '';
+  const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const inApp = /Instagram|FBAN|FBAV|FB_IAB|Snapchat|TikTok|musical_ly|LinkedInApp|Line\/|Twitter|GSA\//.test(ua);
+  if (inApp) return ios ? 'inapp-ios' : 'inapp';
+  if (ios) return 'ios';
+  if (/Android/.test(ua)) return 'android';
+  return 'desktop';
+}
+const HS_SHARE = '<span class="hs-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11v9h12v-9"/></svg></span>';
+const HS_PLUS = '<span class="hs-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/></svg></span>';
+const HS_DOTS = '<span class="hs-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="12" cy="19" r="1.3"/></svg></span>';
+// auto: true when the app asks on its own (respects "Not now" and "Don't ask again"); false when opened from Settings
+function maybeAskHomeScreen() {
+  if (isInstalled() || !cloud) return;
+  const k = deviceKind(); if (k === 'desktop') return;
+  const st = hsGet();
+  if (st.never || (st.until && Date.now() < st.until)) return;
+  if (!st.seen) { hsSet({ seen: Date.now() }); return; } // first visit: let them try the app first, ask next time
+  setTimeout(() => { if ($('#shade').hidden && !document.querySelector('.hs-shade')) openHomeScreen(true); }, 1500);
+}
+function openHomeScreen(auto) {
+  closeHomeScreen();
+  const k = deviceKind();
+  if (isInstalled()) { toast('You’re already using the Home Screen app'); return; }
+  let body, primary = '';
+  if (k === 'ios') body = `<ol>
+      <li><span>Tap the Share button ${HS_SHARE} in Safari’s toolbar${matchMedia('(min-width: 700px)').matches ? ' at the top' : ' at the bottom (or tap ··· first)'}.</span></li>
+      <li><span>Scroll down and tap <b>Add to Home Screen</b> ${HS_PLUS}. If you don’t see it, tap <b>View More</b>.</span></li>
+      <li><span>Tap <b>Add</b>. The app icon shows up on your Home Screen.</span></li></ol>`;
+  else if (k === 'android' && installEvt) { body = ''; primary = `<button class="btn" type="button" id="hsInstall">Add to Home Screen</button>`; }
+  else if (k === 'android') body = `<ol>
+      <li><span>Tap the menu ${HS_DOTS} in the top corner of Chrome.</span></li>
+      <li><span>Tap <b>Add to Home screen</b> or <b>Install app</b>.</span></li>
+      <li><span>Tap <b>Install</b> or <b>Add</b>.</span></li></ol>`;
+  else if (k === 'inapp-ios' || k === 'inapp') body = `<p>You opened this inside another app, which can’t add it to your Home Screen. Copy the link and open it in ${k === 'inapp-ios' ? 'Safari' : 'Chrome'}, then come back to this step.</p>`;
+  else body = `<p>On your phone, open this site in Safari (iPhone) or Chrome (Android) to add it to your Home Screen.</p>`;
+  if (k === 'inapp-ios' || k === 'inapp') primary = `<button class="btn" type="button" id="hsCopy">Copy link</button>`;
+  const box = document.createElement('div');
+  box.className = 'hs-shade';
+  box.innerHTML = `<div class="hs" role="dialog" aria-modal="true" aria-labelledby="hsTitle" tabindex="-1">
+    <div class="hs-top"><img src="/apple-touch-icon.png" alt=""><div><h2 id="hsTitle">Add Andrade Macros to your Home Screen</h2></div></div>
+    <p>Open it in one tap like a normal app, full screen with no browser bars, and stay signed in.</p>
+    ${body}
+    <div class="hs-acts">${primary}<button class="btn ${primary ? 'quiet' : ''}" type="button" id="hsLater">${primary ? 'Not now' : 'Got it'}</button>${auto ? '<button class="never" type="button" id="hsNever">Don’t ask again</button>' : ''}</div></div>
+`;
+  document.body.appendChild(box); document.body.style.overflow = 'hidden';
+  const sheet = box.querySelector('.hs'); sheet.focus({ preventScroll: true });
+  const later = () => { if (auto) hsSet({ until: Date.now() + 7 * 864e5 }); closeHomeScreen(); };
+  box.onclick = e => { if (e.target === box) later(); };
+  box.addEventListener('keydown', e => { if (e.key === 'Escape') later(); });
+  box.querySelector('#hsLater').onclick = later;
+  const nv = box.querySelector('#hsNever'); if (nv) nv.onclick = () => { hsSet({ never: true }); closeHomeScreen(); toast('Okay, we won’t ask again. It’s in Settings → Account anytime.'); };
+  const ins = box.querySelector('#hsInstall');
+  if (ins) ins.onclick = async () => {
+    const e = installEvt; if (!e) return;
+    installEvt = null; e.prompt();
+    try { const c = await e.userChoice; if (c && c.outcome === 'accepted') { hsSet({ never: true }); closeHomeScreen(); } else later(); } catch (er) { later(); }
+  };
+  const cp = box.querySelector('#hsCopy');
+  if (cp) cp.onclick = async () => { const u = siteURL || location.origin; try { await navigator.clipboard.writeText(u); toast('Link copied. Paste it in your browser.'); } catch (e) { prompt('Copy this link:', u); } };
+}
+function closeHomeScreen() { const b = document.querySelector('.hs-shade'); if (b) { b.remove(); if ($('#shade').hidden) document.body.style.overflow = ''; } }
 
 /* ---------- welcome screen ---------- */
 const WELCOMES = { plate: 'Snap your plate', label: 'Nutrition label', intro: 'Quick intro' };
@@ -1285,6 +1375,7 @@ function wireSetup(first) {
     const t = todayKey();
     if (!S.weights.log[t]) { S.weights.log[t] = r1(v.lb); saveDoc('weights', S.weights); }
     S.needsSetup = false; toast('Targets set'); showTab('today');
+    if (!hsGet().seen) hsSet({ seen: Date.now() - 1 }); maybeAskHomeScreen();
   };
   if ($('#sSkip')) $('#sSkip').onclick = () => { S.needsSetup = false; saveDoc('settings', S.settings); renderToday(); };
   if ($('#sCancel')) $('#sCancel').onclick = renderSettings;
@@ -1411,7 +1502,10 @@ function accountHTML() {
     <div class="card"><h3>Invite friends</h3>
     <p class="hint" style="margin:0 0 10px">Send them this link. They create their own account and get their own private log and targets.</p>
     <div class="row"><input type="text" readonly value="${esc(link)}" aria-label="App link" id="shareLink" style="flex:1;min-width:0"><button class="btn ghost" id="copyLink">Copy</button></div>
-    <p class="hint">On iPhone, open the link in Safari, tap Share, then <b>Add to Home Screen</b> to use it like an app.</p></div>`;
+    </div>
+    <div class="card"><h3>Home Screen app</h3>
+    <p class="hint" style="margin:0 0 10px">${isInstalled() ? 'You’re using the Home Screen app on this device.' : 'Put Andrade Macros on your Home Screen so it opens like a normal app.'}</p>
+    ${isInstalled() ? '' : '<button class="btn ghost" type="button" id="hsOpen">Add to Home Screen</button>'}</div>`;
 }
 function dangerHTML() {
   return `<div class="card"><h3>Delete account</h3>
@@ -1430,6 +1524,7 @@ function wireAccount() {
     try { await api('/api/auth', { method: 'POST', body: JSON.stringify({ action: 'change_password', current: q('pwCur').value, password: q('pwNew').value }) }); q('pwBox').hidden = true; q('pwCur').value = q('pwNew').value = ''; toast('Password changed. Other devices were signed out.'); }
     catch (e) { q('pwErr').textContent = e.text || 'Couldn’t change it. Try again.'; }
   };
+  if (q('hsOpen')) q('hsOpen').onclick = () => openHomeScreen(false);
   if (q('copyLink')) q('copyLink').onclick = async () => { try { await navigator.clipboard.writeText(q('shareLink').value); toast('Link copied'); } catch (e) { q('shareLink').select(); } };
   if (q('delOpen')) q('delOpen').onclick = () => { q('delBox').hidden = false; q('delPw').focus(); };
   if (q('delGo')) q('delGo').onclick = async () => {
@@ -1785,6 +1880,7 @@ renderToday();
   await loadDay(S.date);
   if (S.tab !== 'today') showTab(S.tab);
   checkAI();
+  if (!S.needsSetup) maybeAskHomeScreen();
 })();
 })();
 </script>
