@@ -370,7 +370,8 @@ body.gated{padding-bottom:max(20px,env(safe-area-inset-bottom,0px))}
 /* log sheet tabs scroll sideways on small phones */
 #modeSeg{display:flex;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 #modeSeg::-webkit-scrollbar{display:none}
-#modeSeg button{flex:1 0 auto;padding:8px 12px}
+#modeSeg button{flex:1 0 auto;padding:8px 7px;font-size:13px}
+.search input{padding:11px 12px;-webkit-appearance:none;appearance:none}
 /* barcode scanner */
 .scanbox{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:4/3;display:grid;place-items:center}
 .scanbox video{width:100%;height:100%;object-fit:cover;display:block}
@@ -393,6 +394,51 @@ body.gated{padding-bottom:max(20px,env(safe-area-inset-bottom,0px))}
 .toggle input:checked::after{transform:translateX(18px)}
 .quote{font-family:var(--display);font-size:18px;font-weight:700;line-height:1.3;margin:0}
 .quote + small{display:block;color:var(--muted);margin-top:6px}
+/* foods: library, recipes, dining hall */
+.subtabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.subtabs::-webkit-scrollbar,.chips.scroll::-webkit-scrollbar{display:none}
+.subtabs button{flex:none;border:0;background:none;color:var(--muted);font-weight:700;font-size:14px;padding:6px 2px;margin-right:10px;border-bottom:2px solid transparent}
+.subtabs button[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.chips.scroll{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.chips.scroll button{flex:none}
+.flist{display:flex;flex-direction:column}
+.fgroup{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 2px}
+.frow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;text-align:left;border:0;border-top:1px solid var(--line);background:none;padding:10px 2px;width:100%}
+.frow small{color:var(--muted)}
+.frow .kc{font-weight:700}
+.fpick{background:var(--bg);border-radius:12px;padding:10px;margin:4px 0 8px;display:flex;flex-direction:column;gap:8px}
+.amts{display:flex;gap:6px;flex-wrap:wrap}
+.amts button{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:6px 11px;font-weight:700;font-size:13.5px;color:var(--ink)}
+.amts button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.rcard{display:grid;grid-template-columns:1fr auto;gap:4px 10px;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:14px;padding:12px;width:100%}
+.rcard b{font-size:15.5px}
+.rcard small{color:var(--muted)}
+.rcard .kc{grid-row:span 2;align-self:center;font-family:var(--display);font-weight:900;font-size:20px;text-align:right}
+.rcard .kc span{display:block;font-family:var(--body);font-weight:500;font-size:12px;color:var(--muted)}
+.rlist{display:flex;flex-direction:column;gap:8px}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:color-mix(in srgb,var(--accent) 22%,transparent);color:var(--ink);margin-left:6px;vertical-align:middle}
+.recipe h3{font-family:var(--display);font-size:22px;margin:4px 0 2px;line-height:1.15}
+.recipe ul,.recipe ol{margin:6px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:5px}
+.recipe .permac{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;background:var(--bg);border-radius:12px;padding:10px 4px}
+.recipe .permac b{display:block;font-size:17px}
+.recipe .permac small{color:var(--muted);font-size:12px}
+.search{position:relative}
+/* quick add row on Today */
+.quick{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;margin-top:8px}
+.quick::-webkit-scrollbar{display:none}
+.quick button{flex:none;max-width:200px;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:8px 12px;text-align:left;display:flex;flex-direction:column;gap:1px}
+.quick button b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:176px}
+.quick button small{color:var(--muted);font-size:12px}
+.quick button:active{transform:scale(.97)}
+/* swipe on log entries */
+.swipe{position:relative;overflow:hidden}
+.swipe > .sw-bg{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-weight:700;font-size:13px;pointer-events:none}
+.swipe > .sw-bg .l{color:var(--good)} .swipe > .sw-bg .r{color:var(--warn)}
+.swipe > .entry,.swipe > .dl-row{position:relative;background:var(--surface);touch-action:pan-y}
+.mic{display:inline-flex;align-items:center;gap:6px}
+.mic.on{background:var(--warn)!important;color:#fff!important;border-color:var(--warn)!important}
+.ritem .amts{margin-top:2px}
+#hlForm .row.four{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .offline-pill{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:var(--warn);color:#fff;font-size:11.5px;font-weight:700;vertical-align:middle}
 </style>
 
@@ -437,7 +483,7 @@ body.gated{padding-bottom:max(20px,env(safe-area-inset-bottom,0px))}
       <button data-mode="label" aria-pressed="false">Label</button>
       <button data-mode="describe" aria-pressed="false">Describe</button>
       <button data-mode="manual" aria-pressed="false">Manual</button>
-      <button data-mode="recent" aria-pressed="false">Recent</button>
+      <button data-mode="foods" aria-pressed="false">Foods</button>
     </div>
     <div id="sheetBody"></div>
   </div>
@@ -864,6 +910,7 @@ function renderToday() {
     ${row('f', 'Total Fat', tot.f, T.f, '--fat')}
     <div class="left"><span>* Change targets in Settings.</span><span class="${leftCal < 0 ? 'over' : ''}"><strong class="num ${leftCal < 0 ? 'over' : ''}">${fmt(Math.abs(leftCal))}</strong> Cal ${leftCal < 0 ? 'over' : 'left'}</span></div>
   </div>`;
+  html += quickHTML();
   html += habitsHTML();
   html += recsHTML(T, tot);
   const L = logCfg(), groups = logGroups(L), showT = L.showTimes || L.mode === 'time' || L.mode === 'timeline';
@@ -876,8 +923,8 @@ function renderToday() {
     html += `<div class="meal"><div class="meal-h"><h3>${esc(g.name)}${g.sub ? ` <span class="gsub">${g.sub}</span>` : ''}</h3><span class="tot num">${es.length ? fmt(mt.cal) + ' Cal' : ''}${es.length >= 2 ? `<button class="savebtn" data-savemeal="${g.key}" aria-label="Save ${esc(g.name)} as a meal">Save</button>` : ''}</span></div>`;
     if (!es.length && gi === 0 && !S.day.entries.length) html += `<div class="empty-note">Nothing logged yet. Tap <b>+ Log food</b> and snap a photo of your plate — the AI estimates every item's calories and macros, and you can adjust before saving.</div>`;
     for (const e of es) {
-      html += `<div class="entry"><div class="nm" data-edit="${esc(e.id)}" role="button" tabindex="0" aria-label="Edit ${esc(e.name)}"><div>${esc(e.name)}</div><small class="num">${showT ? fmtTime(entryMin(e)) + ' · ' : ''}${e.grams ? fmt(e.grams) + 'g · ' : ''}P ${fmt(e.p)} · C ${fmt(e.c)} · F ${fmt(e.f)}${e.src === 'photo' ? ' · from photo' : ''}</small></div>
-        <span class="kc num">${fmt(e.cal)}</span><button class="del" data-del="${esc(e.id)}" aria-label="Delete ${esc(e.name)}">×</button></div>${S.editId === e.id ? editorHTML(e, L) : ''}`;
+      html += `<div class="swipe" data-sw="${esc(e.id)}"><div class="sw-bg" aria-hidden="true"><span class="l">Duplicate</span><span class="r">Delete</span></div><div class="entry"><div class="nm" data-edit="${esc(e.id)}" role="button" tabindex="0" aria-label="Edit ${esc(e.name)}"><div>${esc(e.name)}</div><small class="num">${showT ? fmtTime(entryMin(e)) + ' · ' : ''}${e.grams ? fmt(e.grams) + 'g · ' : ''}P ${fmt(e.p)} · C ${fmt(e.c)} · F ${fmt(e.f)}${e.src === 'photo' ? ' · from photo' : ''}</small></div>
+        <span class="kc num">${fmt(e.cal)}</span><button class="del" data-del="${esc(e.id)}" aria-label="Delete ${esc(e.name)}">×</button></div></div>${S.editId === e.id ? editorHTML(e, L) : ''}`;
     }
     html += `<div class="gacts"><button class="addmeal" data-add="${g.key}">+ Add${L.mode === 'timeline' ? ' food' : ' to ' + esc(g.name.toLowerCase())}</button>${canCopy && !es.length ? `<button class="addmeal copy" data-copy="${g.key}">Copy from yesterday</button>` : ''}</div></div>`;
   });
@@ -936,7 +983,7 @@ function saveMealGroup(key) {
   const name = items.slice(0, 2).map(i => i.name).join(' + ') + (items.length > 2 ? ` + ${items.length - 2} more` : '');
   S.settings.saved = [{ id: Date.now().toString(36), name, items }, ...(S.settings.saved || [])].slice(0, 30);
   saveDoc('settings', S.settings);
-  toast('Saved — find it under + Log food → Recent');
+  toast('Saved. Find it under + Log food → Foods.');
 }
 
 /* ---------- Food log layout: meals, time of day, timeline, or custom meals ---------- */
@@ -1120,7 +1167,36 @@ $('#view-today').addEventListener('click', e => {
   saveDoc('day-' + S.date, S.day); renderToday();
 });
 
+/* quick add: your most-logged foods, led by what you usually eat at this time of day */
+let FREQ = {};
+function buildFreq(days) {
+  FREQ = {};
+  days.forEach(d => (d.entries || []).forEach(noteFreq));
+}
+function noteFreq(e) {
+  const k = String(e.name || '').trim().toLowerCase(); if (!k) return;
+  const f = FREQ[k] || (FREQ[k] = { name: e.name, n: 0, slots: {}, last: 0 });
+  f.n++; const slot = mealFromMin(entryMin(e)); f.slots[slot] = (f.slots[slot] || 0) + 1;
+  if ((e.at || 0) >= f.last) { f.last = e.at || f.last; Object.assign(f, { name: e.name, grams: e.grams || 0, cal: e.cal, p: e.p, c: e.c, f: e.f }); }
+}
+function quickList() {
+  const slot = mealFromMin(S.date === todayKey() ? hmToMin(nowHM()) : 720);
+  const all = Object.values(FREQ).filter(f => f.cal > 0);
+  const usual = all.filter(f => (f.slots[slot] || 0) >= 2).sort((a, b) => b.slots[slot] - a.slots[slot] || b.n - a.n);
+  const rest = all.filter(f => !usual.includes(f) && f.n >= 2).sort((a, b) => b.n - a.n || b.last - a.last);
+  const out = usual.slice(0, 4).map(f => ({ ...f, usual: true })).concat(rest).slice(0, 8);
+  return out;
+}
+function quickHTML() {
+  const list = quickList(); if (!list.length) return '';
+  const slot = mealFromMin(S.date === todayKey() ? hmToMin(nowHM()) : 720);
+  const title = list[0].usual ? `Your usual ${{ breakfast: 'breakfast', lunch: 'lunch', dinner: 'dinner', snack: 'snacks' }[slot]}` : 'Quick add';
+  return `<div class="card"><div class="meal-h" style="padding-top:0"><h3>${title}</h3><span class="tot">Tap to log</span></div>
+    <div class="quick">${list.map((f, i) => `<button type="button" data-quick="${i}" aria-label="Log ${esc(f.name)}, ${fmt(f.cal)} calories"><b>${esc(f.name)}</b><small class="num">${fmt(f.cal)} Cal · P ${fmt(f.p)}${f.usual ? ' · usual' : ''}</small></button>`).join('')}</div></div>`;
+}
+
 /* food recommendations */
+const dietName0 = k => ({ general: 'General', high_protein: 'High protein', vegetarian: 'Vegetarian', vegan: 'Vegan', pescatarian: 'Pescatarian', low_carb: 'Low carb', gluten_free: 'Gluten-free', dairy_free: 'Dairy-free', no_pork: 'No pork' })[k] || 'General';
 function recsHTML(T, tot) {
   if (!sample) return '';
   const rem = { cal: T.cal - tot.cal, p: T.p - tot.p, c: T.c - tot.c, f: T.f - tot.f };
@@ -1133,6 +1209,7 @@ function recsHTML(T, tot) {
     <p class="hint" style="margin:0 0 10px">${rem.cal > 0 ? `<b class="num">${fmt(rem.cal)} Cal</b> and <b class="num">${fmt(Math.max(0, rem.p))}g protein</b> left today.` : `You're at your calories for today. Suggestions will be lean, high-protein options.`}</p>
     <div class="row"><div class="field" style="min-width:180px"><label for="recCtx">Where are you eating? (optional)</label><input type="text" id="recCtx" placeholder="e.g. dining hall, Dunkin, my fridge has eggs and rice"></div>
     <button class="btn" id="recGo" ${R && R.loading ? 'disabled' : ''}>Suggest foods</button></div>
+    <button class="btn ghost sm" type="button" id="openRecipes" style="margin-top:10px">Browse recipes</button>
     ${body}</div>`;
 }
 let recCtl = null;
@@ -1151,7 +1228,7 @@ async function runRecs() {
 Remaining for today: ${Math.round(rem.cal)} Cal, ${Math.round(rem.p)} g protein, ${Math.round(rem.c)} g carbs, ${Math.round(rem.f)} g fat. Local time is about ${hour}:00.
 ${S.recCtx ? 'Where they are eating / what is available: ' + S.recCtx : 'No location given: suggest common, cheap foods a college student can easily get.'}
 ${recentNames ? 'Foods they have logged recently (for taste, not required): ' + recentNames : ''}
-Suggest 4 specific options (a single food or a simple combo) that each fit inside the remaining calories and prioritize hitting the protein that's left. If calories are already used up, suggest very low-calorie, high-protein options. Use realistic portions and accurate macros. Favor whole foods; no supplements other than protein powder.
+${myDiet() !== 'general' ? 'Their diet: ' + dietName0(myDiet()) + ' (' + DIET_NOTES[myDiet()] + '). Every suggestion must fit it.\n' : ''}Suggest 4 specific options (a single food or a simple combo) that each fit inside the remaining calories and prioritize hitting the protein that's left. If calories are already used up, suggest very low-calorie, high-protein options. Use realistic portions and accurate macros. Favor whole foods; no supplements other than protein powder.
 Reply with ONLY JSON: {"items":[{"name":"Greek yogurt with berries","amount":"1 cup yogurt + 1/2 cup berries","calories":180,"protein":24,"carbs":18,"fat":1,"why":"one short reason it fits"}]}`;
   try {
     const res = await sample.json(prompt, { signal: recCtl.signal, modelTier: 'quick', cache: false });
@@ -1165,6 +1242,9 @@ $('#view-today').addEventListener('click', e => {
   const dt = e.target.closest('[data-dtype]');
   if (dt) { S.day.type = dt.dataset.dtype; saveDoc('day-' + S.date, S.day); renderToday(); return; }
   if (e.target.closest('#recGo')) { runRecs(); return; }
+  if (e.target.closest('#openRecipes')) { openFoods('recipes'); return; }
+  const qa = e.target.closest('[data-quick]');
+  if (qa) { const it = quickList()[+qa.dataset.quick]; if (it) { prepSheet(null); addEntries([{ name: it.name, grams: it.grams, cal: it.cal, p: it.p, c: it.c, f: it.f, src: 'quick' }]); } return; }
   if (e.target.closest('#recStop')) { if (recCtl) recCtl.abort(); return; }
   const rb = e.target.closest('[data-rec]');
   if (rb && S.recs && S.recs.items) {
@@ -1193,6 +1273,40 @@ $('#view-today').addEventListener('click', e => {
   const a = e.target.closest('[data-add]');
   if (a) openSheet(a.dataset.add);
 });
+// swipe a logged food: left to delete (with Undo), right to log it again
+(function () {
+  const v = $('#view-today');
+  let sx = 0, sy = 0, row = null, wrap = null, dx = 0, locked = null;
+  v.addEventListener('touchstart', e => {
+    const w = e.target.closest('.swipe'); if (!w || e.touches.length > 1) return;
+    wrap = w; row = w.querySelector('.entry, .dl-row'); sx = e.touches[0].clientX; sy = e.touches[0].clientY; dx = 0; locked = null;
+    row.style.transition = 'none';
+  }, { passive: true });
+  v.addEventListener('touchmove', e => {
+    if (!row) return;
+    const x = e.touches[0].clientX - sx, y = e.touches[0].clientY - sy;
+    if (locked == null && (Math.abs(x) > 8 || Math.abs(y) > 8)) locked = Math.abs(x) > Math.abs(y) * 1.3 ? 'x' : 'y';
+    if (locked !== 'x') return;
+    dx = Math.max(-140, Math.min(140, x)); row.style.transform = `translateX(${dx}px)`;
+  }, { passive: true });
+  let suppress = false;
+  v.addEventListener('click', e => { if (suppress && e.isTrusted) { e.stopPropagation(); e.preventDefault(); suppress = false; } }, true);
+  const end = () => {
+    if (!row) return;
+    const r0 = row, id = wrap.dataset.sw, d = dx; row = null; wrap = null;
+    r0.style.transition = 'transform .18s ease'; r0.style.transform = '';
+    if (locked !== 'x') return;
+    if (Math.abs(d) > 10) { setTimeout(() => { suppress = true; setTimeout(() => { suppress = false; }, 350); }, 0); }
+    if (d < -90) { const b = document.querySelector(`[data-del="${CSS.escape(id)}"]`); if (b) b.click(); }
+    else if (d > 90) {
+      const e0 = S.day.entries.find(x => x.id === id); if (!e0) return;
+      const copy = { ...e0, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), at: Date.now(), time: S.date === todayKey() ? nowHM() : e0.time };
+      S.day.entries.push(copy); noteFreq(copy); saveDoc('day-' + S.date, S.day); renderToday();
+      toast(`Logged ${e0.name} again`, () => { S.day.entries = S.day.entries.filter(x => x.id !== copy.id); saveDoc('day-' + S.date, S.day); renderToday(); });
+    }
+  };
+  v.addEventListener('touchend', end); v.addEventListener('touchcancel', end);
+})();
 $('#prevDay').onclick = () => loadDay(addDays(S.date, -1));
 $('#nextDay').onclick = () => { if (S.date < todayKey()) loadDay(addDays(S.date, 1)); };
 
@@ -1348,7 +1462,7 @@ async function renderHistory() {
     split: { protein: Math.round(pc / mc * 100), carbs: Math.round(cc / mc * 100), fat: Math.round(fc / mc * 100) },
     weekendMinusWeekday: wkGap != null ? Math.round(wkGap) : null, trendChange7d: change != null ? r1(change) : null,
     topFoods: top.map(f => f.name), mealShare: Object.fromEntries(Object.entries(meals).map(([m, c]) => [m, Math.round(c / mealTot * 100)])),
-    habits: habRows.map(h => ({ habit: h.name, pct: h.pct, streak: h.streak })), goal: S.settings.profile ? S.settings.profile.goal : null };
+    habits: habRows.map(h => ({ habit: h.name, pct: h.pct, streak: h.streak })), goal: S.settings.profile ? S.settings.profile.goal : null, diet: dietName0(myDiet()) };
   const analytics = `
     <div class="card"><h3>Streaks</h3><div class="stats">
       <div class="stat"><small>Logging streak</small><b class="num">${streak}</b><span>day${streak === 1 ? '' : 's'} in a row</span></div>
@@ -1559,6 +1673,11 @@ function wireAppearance() {
   }
 }
 
+function dietSettingsHTML() {
+  const names = { general: 'General', high_protein: 'High protein', vegetarian: 'Vegetarian', vegan: 'Vegan', pescatarian: 'Pescatarian', low_carb: 'Low carb', gluten_free: 'Gluten-free', dairy_free: 'Dairy-free', no_pork: 'No pork' };
+  return `<div class="card"><h3>Diet</h3><p class="hint" style="margin:0 0 10px">Foods and Recipes open on this diet, and food suggestions and the coach follow it. General shows everything.</p>
+    <div class="swatches" id="dietSet" style="grid-template-columns:1fr">${Object.entries(names).map(([k, n]) => `<button type="button" class="sw" data-dset="${k}" aria-pressed="${myDiet() === k}"><span>${n}</span><small style="font-weight:400;color:var(--muted)">${esc(DIET_NOTES[k])}</small></button>`).join('')}</div></div>`;
+}
 function habitSettingsHTML() {
   const hc = habitCfg();
   return `<div class="card"><h3>Habits</h3>
@@ -1747,6 +1866,7 @@ function renderSettings() {
       ['notif', 'Notifications', pushSub ? 'Daily quote on' : 'Off', ic('#f43f5e', '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15Z"/><path d="M10 20a2 2 0 0 0 4 0"/>')]]],
     ['Nutrition', [
       ['targets', 'Daily targets', fmt(T.cal) + ' Cal · ' + T.p + 'g P', ic('#ef4444', '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".6" fill="#fff"/>')],
+      ['diet', 'Diet', ({ general: 'General', high_protein: 'High protein', vegetarian: 'Vegetarian', vegan: 'Vegan', pescatarian: 'Pescatarian', low_carb: 'Low carb', gluten_free: 'Gluten-free', dairy_free: 'Dairy-free', no_pork: 'No pork' })[myDiet()], ic('#10b981', '<path d="M7 20c0-7 4-12 11-14-1 7-5 11-11 14Z"/><path d="M7 20c2-4 5-7 8-9"/>')],
       ['logview', 'Food log layout', { meals: 'Meals', time: 'Time of day', timeline: 'Timeline', custom: 'Custom meals' }[logCfg().mode], ic('#ec4899', '<circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/>')],
       ['training', 'Training & rest days', cy.on ? cy.days.length + ' training days' : 'Off', ic('#f59e0b', '<path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"/>')]]],
     ['Account', [
@@ -1759,7 +1879,7 @@ function renderSettings() {
     return;
   }
   const title = ROWS.flatMap(r => r[1]).find(r => r[0] === sub);
-  const secs = { appearance: appearanceHTML(), habits: habitSettingsHTML(), notif: notifHTML(), targets: secTargets, logview: logSettingsHTML(), training: secTraining, account: secAccount };
+  const secs = { appearance: appearanceHTML(), habits: habitSettingsHTML(), notif: notifHTML(), diet: dietSettingsHTML(), targets: secTargets, logview: logSettingsHTML(), training: secTraining, account: secAccount };
   v.innerHTML = `<button class="ios-back" id="setBack">‹ Settings</button><h1 class="ios-title">${esc(title ? title[1] : 'Settings')}</h1>
     ${Object.entries(secs).map(([k, h]) => `<div data-sec="${k}" ${k === sub ? '' : 'hidden'}>${h}</div>`).join('')}`;
   $('#setBack').onclick = () => { S.setSub = null; renderSettings(); window.scrollTo(0, 0); };
@@ -1767,6 +1887,8 @@ function renderSettings() {
   wireAppearance();
   wireLogSettings();
   if (sub === 'notif') wireNotif();
+  const ds = $('#dietSet');
+  if (ds) ds.onclick = e => { const b = e.target.closest('[data-dset]'); if (!b) return; S.settings.diet = b.dataset.dset; libDiet = null; saveDoc('settings', S.settings); ds.querySelectorAll('[data-dset]').forEach(x => x.setAttribute('aria-pressed', x === b)); toast('Diet saved'); };
   const hc = habitCfg();
   $('#habSet').onclick = e => { const b = e.target.closest('[data-hk]'); if (!b) return; const k = b.dataset.hk; hc.on = hc.on.includes(k) ? hc.on.filter(x => x !== k) : [...hc.on, k]; b.setAttribute('aria-pressed', hc.on.includes(k)); S.settings.habits = { ...hc }; saveDoc('settings', S.settings); };
   $('#waterGoal').onchange = e => { hc.waterGoal = Math.max(1, Math.min(20, +e.target.value || 8)); S.settings.habits = { ...hc }; saveDoc('settings', S.settings); toast('Water goal saved'); };
@@ -1826,7 +1948,7 @@ function openSheet(meal) {
   setMode(!sampleChecked || (sample && imgOK) ? 'photo' : sample ? 'describe' : 'scan');
 }
 let sheetReturn = null;
-function closeSheet() { stopScan(); if (ctl) ctl.abort(); $('#shade').hidden = true; document.body.style.overflow = ''; const r = sheetReturn; sheetReturn = null; if (r && document.contains(r) && r.focus) r.focus({ preventScroll: true }); }
+function closeSheet() { stopScan(); stopListening(); if (ctl) ctl.abort(); $('#shade').hidden = true; document.body.style.overflow = ''; const r = sheetReturn; sheetReturn = null; if (r && document.contains(r) && r.focus) r.focus({ preventScroll: true }); }
 $('#fab').onclick = () => { if (S.tab !== 'today') { S.date = todayKey(); showTab('today'); loadDay(S.date); } openSheet(); };
 $('#closeSheet').onclick = closeSheet;
 $('#shade').addEventListener('click', e => { if (e.target.id === 'shade') closeSheet(); });
@@ -1834,8 +1956,9 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#shade
 $('#modeSeg').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (b && !busy) { if (b.dataset.mode !== mode && photo) { if (photoURL) URL.revokeObjectURL(photoURL); photo = null; photoURL = null; } review = null; aiErr = ''; setMode(b.dataset.mode); } });
 function setMode(m) {
   if (m !== 'scan') stopScan();
+  stopListening();
   mode = m;
-  document.querySelectorAll('#modeSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m));
+  document.querySelectorAll('#modeSeg button').forEach(b => { b.setAttribute('aria-pressed', b.dataset.mode === m); if (b.dataset.mode === m && b.scrollIntoView) b.scrollIntoView({ block: 'nearest', inline: 'nearest' }); });
   renderSheet();
 }
 function renderSheet() {
@@ -1863,9 +1986,11 @@ function renderSheet() {
   } else if (mode === 'describe') {
     if (!sample) { b.innerHTML = sampleChecked ? aiBlockedHTML(false) : `<div class="status"><div class="spin"></div>Getting ready…</div>`; if (sampleChecked) wireAiBlocked(); return; }
     b.innerHTML = `<div class="field"><label for="desc">What did you eat?</label><textarea id="desc" rows="4" placeholder="e.g. Chipotle bowl: white rice, chicken, black beans, mild salsa, cheese, guac"></textarea></div>
-      <div class="row"><button class="btn" id="go">Estimate macros</button></div>
+      <div class="row"><button class="btn" id="go">Estimate macros</button>${SpeechRec ? '<button class="btn ghost mic" type="button" id="micBtn" aria-pressed="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Say it</button>' : ''}</div>
+      ${SpeechRec ? '' : '<p class="hint" style="margin:0">Tip: tap the microphone on your keyboard to say what you ate.</p>'}
       <div id="aiStatus">${aiErr ? `<p class="err">${esc(aiErr)}</p>` : ''}</div>`;
-    $('#go').onclick = () => { const t = $('#desc').value.trim(); if (!t) { toast('Describe what you ate first.'); return; } runAI('describe', t); };
+    $('#go').onclick = () => { stopListening(); const t = $('#desc').value.trim(); if (!t) { toast('Describe what you ate first.'); return; } runAI('describe', t); };
+    if ($('#micBtn')) $('#micBtn').onclick = toggleListening;
   } else if (mode === 'manual') {
     b.innerHTML = `<div class="field"><label for="mName">Food</label><input type="text" id="mName" placeholder="Protein shake"></div>
       <div class="row"><div class="field"><label for="mCal">Calories</label><input type="number" id="mCal" inputmode="numeric" min="0"></div>
@@ -1883,14 +2008,7 @@ function renderSheet() {
       addEntries([{ name, grams: +$('#mG').value || 0, cal, p, c, f, src: 'manual' }]);
     };
   } else {
-    const rec = S.settings.recent || [], saved = S.settings.saved || [];
-    const savedHTML = saved.length ? `<p class="sec-label">Saved meals</p>${saved.map((m, i) => { const t = totals(m.items); return `<div class="savedmeal"><span><b>${esc(m.name)}</b><br><small class="num">${m.items.length} items · ${fmt(t.cal)} Cal · P ${fmt(t.p)} · C ${fmt(t.c)} · F ${fmt(t.f)}</small></span><button class="btn sm" data-sm="${i}">Log</button><button class="del" data-smdel="${i}" aria-label="Delete saved meal ${esc(m.name)}">×</button></div>`; }).join('')}<p class="sec-label" style="margin-top:12px">Recent foods</p>` : '';
-    b.innerHTML = savedHTML + (rec.length ? `<div class="recent">${rec.map((r, i) => `<button data-r="${i}"><span><b>${esc(r.name)}</b><br><small class="num">${r.grams ? fmt(r.grams) + 'g · ' : ''}P ${fmt(r.p)} · C ${fmt(r.c)} · F ${fmt(r.f)}</small></span><span class="num"><b>${fmt(r.cal)}</b> Cal</span></button>`).join('')}</div>`
-      : `<p class="hint">Foods you log show up here so you can re-add them in one tap. Tap Save on any meal with 2+ items to keep it as a saved meal.</p>`);
-    b.querySelectorAll('[data-r]').forEach(x => x.onclick = () => { const r = rec[+x.dataset.r]; addEntries([{ ...r, src: 'recent' }]); });
-    b.querySelectorAll('[data-sm]').forEach(x => x.onclick = () => { const m = saved[+x.dataset.sm]; addEntries(m.items.map(it => ({ ...it, src: 'saved' }))); });
-    b.querySelectorAll('[data-smdel]').forEach(x => x.onclick = () => { const i0 = +x.dataset.smdel, gone = saved[i0]; S.settings.saved = saved.filter((_, i) => i !== i0); saveDoc('settings', S.settings); renderSheet();
-      toast(`Removed ${gone.name}`, () => { const cur = S.settings.saved || []; cur.splice(Math.min(i0, cur.length), 0, gone); S.settings.saved = cur; saveDoc('settings', S.settings); if (!$('#shade').hidden && mode === 'recent' && !review) renderSheet(); }); });
+    renderFoods();
   }
 }
 $('#fileIn').onchange = e => { const f = e.target.files && e.target.files[0]; if (f) setPhoto(f); e.target.value = ''; };
@@ -2015,13 +2133,15 @@ function renderReview() {
       <div class="top"><input type="text" data-name="${i}" value="${esc(it.name)}" aria-label="Food name"><button class="del" data-rm="${i}" aria-label="Remove ${esc(it.name)}">×</button></div>
       ${it.serv ? `<div class="hint" style="margin:0">1 serving = ${esc(it.serving || (it.base.g ? it.base.g + 'g' : 'as labeled'))}</div>` : ''}
       <div class="mac num">${it.serv ? `<label>Servings <input type="number" data-x="${i}" value="${it.factor}" min="0" step="0.25" inputmode="decimal" aria-label="Servings"></label>` : it.base.g > 0 ? `<label>g <input type="number" data-g="${i}" value="${Math.round(it.grams)}" min="0" inputmode="numeric" aria-label="Grams"></label>` : `<label>× <input type="number" data-x="${i}" value="${it.factor}" min="0" step="0.25" aria-label="Servings"></label>`}
-        <span><b>${fmt(s.cal)}</b> Cal</span><span style="color:var(--pro)">P ${fmt(s.p)}</span><span style="color:var(--carb)">C ${fmt(s.c)}</span><span style="color:var(--fat)">F ${fmt(s.f)}</span></div></div>`; }).join('')}
+        <span><b>${fmt(s.cal)}</b> Cal</span><span style="color:var(--pro)">P ${fmt(s.p)}</span><span style="color:var(--carb)">C ${fmt(s.c)}</span><span style="color:var(--fat)">F ${fmt(s.f)}</span></div>
+      <div class="amts" role="group" aria-label="Portion of ${esc(it.name)}">${[0.5, 1, 1.5, 2].map(k => { const cur = it.serv || !(it.base.g > 0) ? it.factor : it.grams / it.base.g; return `<button type="button" data-por="${i}" data-k="${k}" aria-pressed="${Math.abs(cur - k) < 0.01}">${k === 0.5 ? '½' : k === 1.5 ? '1½' : k}×</button>`; }).join('')}</div></div>`; }).join('')}
     <div class="rsum num"><span>Total</span><span>${fmt(tot.cal)} Cal · P ${fmt(tot.p)} · C ${fmt(tot.c)} · F ${fmt(tot.f)}</span></div>
     <div class="row"><button class="btn" id="rSave" ${R.items.length ? '' : 'disabled'}>Log ${R.items.length} item${R.items.length === 1 ? '' : 's'}</button><button class="btn ghost" id="rBack">Start over</button></div>`;
   b.querySelectorAll('[data-g]').forEach(x => x.onchange = () => { R.items[+x.dataset.g].grams = Math.max(0, +x.value || 0); renderReview(); });
   b.querySelectorAll('[data-x]').forEach(x => x.onchange = () => { R.items[+x.dataset.x].factor = Math.max(0, +x.value || 0); renderReview(); });
   b.querySelectorAll('[data-name]').forEach(x => x.oninput = () => { R.items[+x.dataset.name].name = x.value; });
   b.querySelectorAll('[data-rm]').forEach(x => x.onclick = () => { R.items.splice(+x.dataset.rm, 1); renderReview(); });
+  b.querySelectorAll('[data-por]').forEach(x => x.onclick = () => { const it = R.items[+x.dataset.por], k = +x.dataset.k; if (!it.serv && it.base.g > 0) it.grams = Math.round(it.base.g * k); else it.factor = k; renderReview(); });
   $('#rBack').onclick = () => { review = null; renderSheet(); };
   $('#rSave').onclick = () => addEntries(R.items.map(it => { const s = scaled(it); return { name: it.name.trim() || 'Food', grams: it.serv ? it.base.g * it.factor : it.base.g > 0 ? it.grams : 0, ...s, src: it.src }; }));
 }
@@ -2030,6 +2150,7 @@ function addEntries(list) {
   const meal = currentMeal(), time = $('#timeSel').value || nowHM();
   const made = list.map(e => ({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), meal, time, name: e.name, grams: Math.round(e.grams || 0), cal: Math.round(e.cal), p: r1(e.p), c: r1(e.c), f: r1(e.f), src: e.src || 'manual', at: Date.now() }));
   S.day.entries.push(...made);
+  made.forEach(noteFreq);
   saveDoc('day-' + S.date, S.day);
   const rec = (S.settings.recent || []).filter(r => !made.some(m => m.name.toLowerCase() === r.name.toLowerCase()));
   S.settings.recent = made.map(m => ({ name: m.name, grams: m.grams, cal: m.cal, p: m.p, c: m.c, f: m.f })).concat(rec).slice(0, 25);
@@ -2038,6 +2159,173 @@ function addEntries(list) {
   closeSheet(); renderToday();
   toast(`Logged ${made.length} item${made.length === 1 ? '' : 's'} · ${fmt(made.reduce((a, m) => a + m.cal, 0))} Cal`);
 }
+
+/* ---------- voice: say what you ate ---------- */
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+let vrec = null;
+function stopListening() { if (vrec) { try { vrec.stop(); } catch (e) {} vrec = null; } const m = $('#micBtn'); if (m) { m.classList.remove('on'); m.setAttribute('aria-pressed', 'false'); m.lastChild.textContent = 'Say it'; } }
+function toggleListening() {
+  if (vrec) { stopListening(); return; }
+  const ta = $('#desc'), m = $('#micBtn'); if (!ta) return;
+  const before = ta.value.trim();
+  vrec = new SpeechRec(); vrec.lang = navigator.language || 'en-US'; vrec.interimResults = true; vrec.continuous = true;
+  vrec.onresult = ev => { let t = ''; for (let i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript; ta.value = (before ? before + ' ' : '') + t.trim(); };
+  vrec.onerror = ev => { stopListening(); if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') toast('Microphone access is off. Allow it for this site, or use the keyboard’s microphone.'); else if (ev.error !== 'aborted' && ev.error !== 'no-speech') toast('Didn’t catch that. Try again.'); };
+  vrec.onend = () => { if (vrec) stopListening(); };
+  try { vrec.start(); m.classList.add('on'); m.setAttribute('aria-pressed', 'true'); m.lastChild.textContent = 'Listening… tap to stop'; } catch (e) { vrec = null; }
+}
+
+/* ---------- Foods: recent & saved, food library, recipes, dining hall ---------- */
+let LIB = null, libLoading = null, foodsSub = 'recent', libDiet = null, libQ = '', libPick = null, recipeOpen = null, recipeCuisine = 'all', recipeAmt = 1;
+const DIET_NOTES = {
+  general: 'Everything. No filter.', high_protein: 'At least 30% of calories from protein.', vegetarian: 'No meat, poultry or fish.', vegan: 'No animal products, including dairy, eggs and honey.',
+  pescatarian: 'Fish and seafood, but no other meat.', low_carb: '15 g of carbs or less per serving.', gluten_free: 'No wheat, barley or rye ingredients. Check labels if you’re celiac.',
+  dairy_free: 'No milk, cheese, yogurt or butter.', no_pork: 'No pork, bacon, linguiça or chouriço.'
+};
+const myDiet = () => (S.settings.diet && DIET_NOTES[S.settings.diet]) ? S.settings.diet : 'general';
+async function loadLibrary() {
+  if (LIB) return LIB;
+  if (!libLoading) libLoading = fetch('/library.json').then(r => { if (!r.ok) throw new Error('lib'); return r.json(); }).then(j => (LIB = j)).catch(e => { libLoading = null; throw e; });
+  return libLoading;
+}
+const dietName = k => { const d = LIB && LIB.diets.find(x => x[0] === k); return d ? d[1] : 'General'; };
+const macLine = x => `${fmt(x.cal)} Cal · P ${fmt(x.p)} · C ${fmt(x.c)} · F ${fmt(x.f)}`;
+function hallItems() { return Array.isArray(S.settings.hall) ? S.settings.hall : []; }
+function inHall(name) { const n = name.toLowerCase(); return hallItems().some(h => h.name.toLowerCase() === n); }
+function toggleHall(item) {
+  const n = item.name.toLowerCase(), list = hallItems();
+  if (list.some(h => h.name.toLowerCase() === n)) { S.settings.hall = list.filter(h => h.name.toLowerCase() !== n); toast('Removed from Dining hall'); }
+  else { S.settings.hall = [{ name: item.name, serving: item.serving || (item.grams ? fmt(item.grams) + 'g' : ''), grams: item.grams || 0, cal: Math.round(item.cal), p: r1(item.p), c: r1(item.c), f: r1(item.f) }, ...list].slice(0, 80); toast('Added to Dining hall'); }
+  saveDoc('settings', S.settings);
+}
+function renderFoods() {
+  const b = $('#sheetBody');
+  if (libDiet == null) libDiet = myDiet();
+  const tabs = [['recent', 'Recent'], ['library', 'Foods'], ['recipes', 'Recipes'], ['hall', 'Dining hall']];
+  const head = `<div class="subtabs" role="group" aria-label="Food lists">${tabs.map(([k, n]) => `<button type="button" data-fsub="${k}" aria-pressed="${foodsSub === k}">${n}</button>`).join('')}</div>`;
+  let body = '';
+  if (foodsSub === 'recent') body = recentHTML();
+  else if (foodsSub === 'hall') body = hallHTML();
+  else if (!LIB) {
+    body = `<div class="status"><div class="spin"></div>Loading foods…</div>`;
+    loadLibrary().then(() => { if (!$('#shade').hidden && mode === 'foods') renderFoods(); }).catch(() => { if (!$('#shade').hidden && mode === 'foods') { $('#sheetBody').querySelector('.status').outerHTML = '<p class="err">Couldn’t load the food list. Check your connection.</p>'; } });
+  } else if (foodsSub === 'recipes' && recipeOpen) body = recipeHTML(LIB.recipes.find(r => r.id === recipeOpen));
+  else body = dietBarHTML() + (foodsSub === 'library' ? libraryHTML() : recipesHTML());
+  b.innerHTML = head + body;
+  wireFoods(b);
+}
+function dietBarHTML() {
+  return `<div class="chips scroll" id="dietBar" role="group" aria-label="Diet">${LIB.diets.map(([k, n]) => `<button type="button" data-diet="${k}" aria-pressed="${libDiet === k}">${n}</button>`).join('')}</div>
+    ${libDiet !== 'general' ? `<p class="hint" style="margin:0">${esc(DIET_NOTES[libDiet])}${libDiet !== myDiet() ? ` <button type="button" class="linkish" id="setDiet" style="background:none;border:0;color:var(--accent);font-weight:700;padding:0">Make this my diet</button>` : ''}</p>` : ''}
+    <div class="field search"><label class="vh" for="libQ">Search</label><input type="search" id="libQ" placeholder="${foodsSub === 'library' ? 'Search foods…' : 'Search recipes…'}" value="${esc(libQ)}" autocomplete="off"></div>`;
+}
+function libraryHTML() {
+  const q = libQ.trim().toLowerCase();
+  const list = LIB.foods.filter(f => f.diets.includes(libDiet) && (!q || f.name.toLowerCase().includes(q)));
+  if (!list.length) return `<p class="hint">No foods match. Try another diet or search.</p>`;
+  let html = '<div class="flist">', grp = null;
+  const order = ['Protein', 'Dairy', 'Dairy & alternatives', 'Carbs', 'Beans', 'Fruit', 'Vegetables', 'Fats', 'Extras'];
+  list.sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group));
+  for (const f of list) {
+    if (f.group !== grp && !q) { grp = f.group; html += `<div class="fgroup">${esc(grp)}</div>`; }
+    html += `<button type="button" class="frow" data-food="${f.id}" aria-expanded="${libPick && libPick.id === f.id}"><span><b>${esc(f.name)}</b><br><small class="num">${esc(f.serving)} · P ${fmt(f.p)} · C ${fmt(f.c)} · F ${fmt(f.f)}</small></span><span class="kc num">${fmt(f.cal)}</span></button>`;
+    if (libPick && libPick.id === f.id) html += pickHTML(f);
+  }
+  return html + '</div>';
+}
+const AMTS = [0.5, 1, 1.5, 2, 3];
+function pickHTML(f) {
+  const k = libPick.amt, m = { cal: f.cal * k, p: f.p * k, c: f.c * k, f: f.f * k };
+  return `<div class="fpick"><div class="amts" role="group" aria-label="Servings">${AMTS.map(a => `<button type="button" data-amt="${a}" aria-pressed="${a === k}">${a === 0.5 ? '½' : a === 1.5 ? '1½' : a}×</button>`).join('')}</div>
+    <small class="num">${a11yAmt(k)} ${esc(f.serving)} · ${macLine(m)}</small>
+    <div class="row"><button class="btn" type="button" id="pickLog">Log ${fmt(m.cal)} Cal</button><button class="btn ghost" type="button" id="pickHall">${inHall(f.name) ? '★ In Dining hall' : '☆ Dining hall'}</button></div></div>`;
+}
+const a11yAmt = k => k === 0.5 ? '½ ×' : k === 1.5 ? '1½ ×' : k + ' ×';
+function recipesHTML() {
+  const q = libQ.trim().toLowerCase();
+  const list = LIB.recipes.filter(r => r.diets.includes(libDiet) && (recipeCuisine === 'all' || r.cuisine === recipeCuisine) && (!q || r.name.toLowerCase().includes(q) || r.ingredients.some(i => i.toLowerCase().includes(q))));
+  return `<div class="chips" role="group" aria-label="Cuisine"><button type="button" data-cuis="all" aria-pressed="${recipeCuisine === 'all'}">All recipes</button><button type="button" data-cuis="cv" aria-pressed="${recipeCuisine === 'cv'}">Cape Verdean</button></div>
+    <div class="rlist">${list.map(r => `<button type="button" class="rcard" data-recipe="${r.id}"><b>${esc(r.name)}${r.cuisine === 'cv' ? '<span class="badge">Cape Verdean</span>' : ''}</b><span class="kc num">${fmt(r.cal)}<span>Cal / serving</span></span>
+      <small class="num">${r.time < 60 ? r.time + ' min' : Math.floor(r.time / 60) + ' hr' + (r.time % 60 ? ' ' + r.time % 60 + ' min' : '')} · serves ${r.serves} · P ${fmt(r.p)} · C ${fmt(r.c)} · F ${fmt(r.f)}</small></button>`).join('') || '<p class="hint">No recipes match. Try another diet or search.</p>'}</div>`;
+}
+function recipeHTML(r) {
+  if (!r) { recipeOpen = null; return recipesHTML(); }
+  const k = recipeAmt, m = { cal: r.cal * k, p: r.p * k, c: r.c * k, f: r.f * k };
+  const dl = r.diets.filter(d => d !== 'general').map(dietName);
+  return `<div class="recipe"><button type="button" class="ios-back" id="rcBack" style="padding-left:0">‹ Recipes</button>
+    <h3>${esc(r.name)}</h3><small class="hint num">${r.time < 60 ? r.time + ' min' : Math.floor(r.time / 60) + ' hr' + (r.time % 60 ? ' ' + r.time % 60 + ' min' : '')} · makes ${r.serves} serving${r.serves === 1 ? '' : 's'}${dl.length ? ' · ' + esc(dl.join(', ')) : ''}</small>
+    <div class="permac num" style="margin-top:10px"><div><b>${fmt(r.cal)}</b><small>Cal</small></div><div><b style="color:var(--pro)">${fmt(r.p)}g</b><small>protein</small></div><div><b style="color:var(--carb)">${fmt(r.c)}g</b><small>carbs</small></div><div><b style="color:var(--fat)">${fmt(r.f)}g</b><small>fat</small></div></div>
+    <p class="hint" style="text-align:center;margin:4px 0 0">per serving</p>
+    <p class="sec-label" style="margin-top:12px">Ingredients <span class="hint">(whole recipe)</span></p><ul>${r.ingredients.map(i => `<li>${esc(i)}</li>`).join('')}</ul>
+    <p class="sec-label" style="margin-top:12px">Steps</p><ol>${r.steps.map(x => `<li>${esc(x)}</li>`).join('')}</ol>
+    ${r.note ? `<p class="hint">${esc(r.note)}</p>` : ''}
+    <div class="fpick" style="margin-top:14px"><span class="sec-label" style="margin:0">Servings you ate</span><div class="amts" role="group" aria-label="Servings eaten">${AMTS.map(a => `<button type="button" data-ramt="${a}" aria-pressed="${a === k}">${a === 0.5 ? '½' : a === 1.5 ? '1½' : a}</button>`).join('')}</div>
+    <div class="row"><button class="btn" type="button" id="rcLog">Log ${fmt(m.cal)} Cal</button><button class="btn ghost" type="button" id="rcHall">${inHall(r.name) ? '★ In Dining hall' : '☆ Dining hall'}</button></div></div>
+    <p class="hint">Nutrition is worked out from the ingredients using USDA values, so it’s an estimate. Change anything after logging by tapping the entry.</p></div>`;
+}
+function recentHTML() {
+  const rec = S.settings.recent || [], saved = S.settings.saved || [];
+  const savedHTML = saved.length ? `<p class="sec-label">Saved meals</p>${saved.map((m, i) => { const t = totals(m.items); return `<div class="savedmeal"><span><b>${esc(m.name)}</b><br><small class="num">${m.items.length} items · ${macLine(t)}</small></span><button class="btn sm" data-sm="${i}">Log</button><button class="del" data-smdel="${i}" aria-label="Delete saved meal ${esc(m.name)}">×</button></div>`; }).join('')}<p class="sec-label" style="margin-top:12px">Recent foods</p>` : '';
+  return savedHTML + (rec.length ? `<div class="recent">${rec.map((r, i) => `<button data-r="${i}"><span><b>${esc(r.name)}</b><br><small class="num">${r.grams ? fmt(r.grams) + 'g · ' : ''}P ${fmt(r.p)} · C ${fmt(r.c)} · F ${fmt(r.f)}</small></span><span class="num"><b>${fmt(r.cal)}</b> Cal</span></button>`).join('')}</div>`
+    : `<p class="hint">Foods you log show up here so you can re-add them in one tap. Tap Save on any meal with 2+ items to keep it as a saved meal.</p>`);
+}
+function hallHTML() {
+  const list = hallItems();
+  return `<p class="hint" style="margin:0">Save what your dining hall serves so a campus meal takes two taps. Add foods here, or tap ☆ on anything in Foods or Recipes.</p>
+    ${list.length ? `<div class="recent">${list.map((h, i) => `<div class="savedmeal"><span><b>${esc(h.name)}</b><br><small class="num">${h.serving ? esc(h.serving) + ' · ' : ''}${macLine(h)}</small></span><button class="btn sm" data-hl="${i}">Log</button><button class="del" data-hldel="${i}" aria-label="Remove ${esc(h.name)}">×</button></div>`).join('')}</div>` : ''}
+    <details ${list.length ? '' : 'open'} style="margin-top:6px"><summary style="font-weight:700;cursor:pointer">+ Add a dining hall food</summary>
+      <form id="hlForm" style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+        <div class="row"><div class="field"><label for="hlName">Food</label><input type="text" id="hlName" maxlength="80" placeholder="e.g. Grill chicken sandwich"></div><div class="field" style="max-width:140px"><label for="hlServ">Portion</label><input type="text" id="hlServ" maxlength="40" placeholder="1 plate"></div></div>
+        <div class="row four"><div class="field"><label for="hlCal">Cal</label><input type="number" id="hlCal" inputmode="numeric" min="0"></div><div class="field"><label for="hlP">Protein</label><input type="number" id="hlP" inputmode="decimal" min="0"></div><div class="field"><label for="hlC">Carbs</label><input type="number" id="hlC" inputmode="decimal" min="0"></div><div class="field"><label for="hlF">Fat</label><input type="number" id="hlF" inputmode="decimal" min="0"></div></div>
+        <p class="hint" style="margin:0">Many dining halls post nutrition on their menu site or a sign by the station. Leave calories blank to work them out from the macros.</p>
+        <button class="btn" type="submit">Save to Dining hall</button></form></details>`;
+}
+function wireFoods(b) {
+  b.querySelectorAll('[data-fsub]').forEach(x => x.onclick = () => { foodsSub = x.dataset.fsub; libPick = null; recipeOpen = null; libQ = ''; renderFoods(); });
+  // recent & saved
+  const rec = S.settings.recent || [], saved = S.settings.saved || [];
+  b.querySelectorAll('[data-r]').forEach(x => x.onclick = () => { const r = rec[+x.dataset.r]; addEntries([{ ...r, src: 'recent' }]); });
+  b.querySelectorAll('[data-sm]').forEach(x => x.onclick = () => { const m = saved[+x.dataset.sm]; addEntries(m.items.map(it => ({ ...it, src: 'saved' }))); });
+  b.querySelectorAll('[data-smdel]').forEach(x => x.onclick = () => { const i0 = +x.dataset.smdel, gone = saved[i0]; S.settings.saved = saved.filter((_, i) => i !== i0); saveDoc('settings', S.settings); renderFoods();
+    toast(`Removed ${gone.name}`, () => { const cur = S.settings.saved || []; cur.splice(Math.min(i0, cur.length), 0, gone); S.settings.saved = cur; saveDoc('settings', S.settings); if (!$('#shade').hidden && mode === 'foods' && !review) renderFoods(); }); });
+  // dining hall
+  const hall = hallItems();
+  b.querySelectorAll('[data-hl]').forEach(x => x.onclick = () => { const h = hall[+x.dataset.hl]; addEntries([{ ...h, src: 'hall' }]); });
+  b.querySelectorAll('[data-hldel]').forEach(x => x.onclick = () => { const i0 = +x.dataset.hldel, gone = hall[i0]; S.settings.hall = hall.filter((_, i) => i !== i0); saveDoc('settings', S.settings); renderFoods();
+    toast(`Removed ${gone.name}`, () => { const cur = hallItems(); cur.splice(Math.min(i0, cur.length), 0, gone); S.settings.hall = cur; saveDoc('settings', S.settings); if (!$('#shade').hidden && mode === 'foods') renderFoods(); }); });
+  const hf = b.querySelector('#hlForm');
+  if (hf) hf.onsubmit = e => {
+    e.preventDefault();
+    const name = $('#hlName').value.trim(); if (!name) { toast('Name the food first.'); return; }
+    const p = +$('#hlP').value || 0, c = +$('#hlC').value || 0, f = +$('#hlF').value || 0;
+    const cal = $('#hlCal').value !== '' ? +$('#hlCal').value : p * 4 + c * 4 + f * 9;
+    if (!(cal > 0)) { toast('Enter calories or macros.'); return; }
+    S.settings.hall = [{ name, serving: $('#hlServ').value.trim(), grams: 0, cal: Math.round(cal), p: r1(p), c: r1(c), f: r1(f) }, ...hallItems()].slice(0, 80);
+    saveDoc('settings', S.settings); toast('Saved to Dining hall'); renderFoods();
+  };
+  // diet filter & search
+  b.querySelectorAll('[data-diet]').forEach(x => x.onclick = () => { libDiet = x.dataset.diet; libPick = null; renderFoods(); });
+  const sd = b.querySelector('#setDiet'); if (sd) sd.onclick = () => { S.settings.diet = libDiet; saveDoc('settings', S.settings); toast('Your diet: ' + dietName(libDiet)); renderFoods(); };
+  const q = b.querySelector('#libQ');
+  if (q) q.oninput = () => { libQ = q.value; libPick = null; const pos = q.selectionStart; renderFoods(); const q2 = $('#libQ'); if (q2) { q2.focus(); try { q2.setSelectionRange(pos, pos); } catch (e) {} } };
+  // library picks
+  b.querySelectorAll('[data-food]').forEach(x => x.onclick = () => { const id = x.dataset.food; libPick = libPick && libPick.id === id ? null : { id, amt: 1 }; renderFoods(); });
+  b.querySelectorAll('[data-amt]').forEach(x => x.onclick = () => { libPick.amt = +x.dataset.amt; renderFoods(); });
+  const pl = b.querySelector('#pickLog');
+  if (pl) pl.onclick = () => { const f = LIB.foods.find(z => z.id === libPick.id), k = libPick.amt; addEntries([{ name: f.name, grams: f.g * k, cal: f.cal * k, p: f.p * k, c: f.c * k, f: f.f * k, src: 'library' }]); libPick = null; };
+  const ph = b.querySelector('#pickHall');
+  if (ph) ph.onclick = () => { const f = LIB.foods.find(z => z.id === libPick.id); toggleHall({ name: f.name, serving: f.serving, grams: f.g, cal: f.cal, p: f.p, c: f.c, f: f.f }); renderFoods(); };
+  // recipes
+  b.querySelectorAll('[data-cuis]').forEach(x => x.onclick = () => { recipeCuisine = x.dataset.cuis; renderFoods(); });
+  b.querySelectorAll('[data-recipe]').forEach(x => x.onclick = () => { recipeOpen = x.dataset.recipe; recipeAmt = 1; renderFoods(); const sh = $('.sheet'); if (sh) sh.scrollTop = 0; });
+  const rb = b.querySelector('#rcBack'); if (rb) rb.onclick = () => { recipeOpen = null; renderFoods(); };
+  b.querySelectorAll('[data-ramt]').forEach(x => x.onclick = () => { recipeAmt = +x.dataset.ramt; renderFoods(); });
+  const rl = b.querySelector('#rcLog');
+  if (rl) rl.onclick = () => { const r = LIB.recipes.find(z => z.id === recipeOpen), k = recipeAmt; addEntries([{ name: r.name + (k !== 1 ? ` (${k === 0.5 ? '½' : k === 1.5 ? '1½' : k} servings)` : ''), grams: 0, cal: r.cal * k, p: r.p * k, c: r.c * k, f: r.f * k, src: 'recipe' }]); recipeOpen = null; };
+  const rh = b.querySelector('#rcHall');
+  if (rh) rh.onclick = () => { const r = LIB.recipes.find(z => z.id === recipeOpen); toggleHall({ name: r.name, serving: '1 serving', grams: 0, cal: r.cal, p: r.p, c: r.c, f: r.f }); renderFoods(); };
+}
+function openFoods(sub) { openSheet(); foodsSub = sub; recipeOpen = null; libPick = null; setMode('foods'); }
 
 /* ---------- barcode scanner (Open Food Facts) ---------- */
 let scanStream = null, scanTimer = null, scanProduct = null, scanState = 'idle', scanMsg = '', detector = null;
@@ -2180,6 +2468,7 @@ renderToday();
   if (!(st && st.targets)) S.needsSetup = true;
   if (w && w.log) S.weights = { kind: 'weights', log: { ...w.log } };
   await loadDay(S.date);
+  listDays(addDays(todayKey(), -45)).then(ds => { buildFreq(ds.filter(d => d.date !== S.date).concat(S.day ? [S.day] : [])); if (S.tab === 'today' && S.day) renderToday(); });
   if (S.tab !== 'today') showTab(S.tab);
   checkAI();
   if (!S.needsSetup) maybeAskHomeScreen();
