@@ -439,6 +439,34 @@ body.gated{padding-bottom:max(20px,env(safe-area-inset-bottom,0px))}
 .mic.on{background:var(--warn)!important;color:#fff!important;border-color:var(--warn)!important}
 .ritem .amts{margin-top:2px}
 #hlForm .row.four{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+/* weight goal banner */
+.pace{border-radius:14px;padding:14px;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 30%,var(--surface)),var(--surface));border:1px solid color-mix(in srgb,var(--accent) 40%,transparent)}
+.pace small{display:block;color:var(--muted);font-weight:600;font-size:12px;letter-spacing:.05em;text-transform:uppercase}
+.pace b{display:block;font-family:var(--display);font-size:24px;font-weight:900;line-height:1.15;margin:4px 0}
+.pace p{margin:0;color:var(--muted);font-size:13.5px}
+.pace.warn{background:var(--surface);border-color:var(--warn)}
+/* progress photos */
+.thumbs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px}
+.thumbs::-webkit-scrollbar{display:none}
+.thumbs button{flex:none;border:2px solid transparent;border-radius:10px;padding:0;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11.5px;color:var(--muted)}
+.thumbs img{width:64px;height:84px;object-fit:cover;border-radius:8px;display:block;background:var(--bg)}
+.thumbs button[aria-pressed="true"]{border-color:var(--accent)}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.compare figure{margin:0;display:flex;flex-direction:column;gap:4px}
+.compare img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:10px;background:var(--bg)}
+.compare figcaption{font-size:12.5px;color:var(--muted);text-align:center}
+.compare figcaption b{color:var(--ink)}
+/* protein goal celebration */
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:30;overflow:hidden}
+.confetti i{position:absolute;top:-12px;width:8px;height:14px;border-radius:2px;animation:fall 1.8s cubic-bezier(.2,.6,.4,1) forwards}
+@keyframes fall{to{transform:translate(var(--dx),105vh) rotate(var(--r));opacity:.2}}
+.celebrate{animation:glowPulse 1.6s ease-out 1}
+@keyframes glowPulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--good) 70%,transparent)}100%{box-shadow:0 0 0 22px transparent}}
+@media (prefers-reduced-motion: reduce){.confetti{display:none}.celebrate{animation:none}}
+/* weekly recap */
+.recap{border:1px solid color-mix(in srgb,var(--accent) 45%,transparent)}
+.recap .stats{margin-top:8px}
+.share-row{display:flex;justify-content:flex-end;margin-top:-8px}
 .offline-pill{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:var(--warn);color:#fff;font-size:11.5px;font-weight:700;vertical-align:middle}
 </style>
 
@@ -545,7 +573,7 @@ async function initStore() {
 }
 const cacheKey = id => LS + 'doc:' + id;
 function cacheDoc(id, data) {
-  if (!data) return;
+  if (!data || id.startsWith('photo-')) return;
   const put = () => localStorage.setItem(cacheKey(id), JSON.stringify(data));
   try { put(); } catch (e) { pruneCache(14); try { put(); } catch (er) {} }
 }
@@ -854,7 +882,7 @@ async function loadDay(date) {
   S.date = date; S.day = null; S.editId = null; renderToday();
   const d = await getDoc('day-' + date);
   if (S.date !== date) return;
-  S.day = d && Array.isArray(d.entries) ? d : blankDay(date);
+  S.day = d && Array.isArray(d.entries) ? { ...d, date } : blankDay(date);
   renderToday();
 }
 const totals = entries => entries.reduce((a, e) => ({ cal: a.cal + (+e.cal||0), p: a.p + (+e.p||0), c: a.c + (+e.c||0), f: a.f + (+e.f||0) }), { cal: 0, p: 0, c: 0, f: 0 });
@@ -910,6 +938,8 @@ function renderToday() {
     ${row('f', 'Total Fat', tot.f, T.f, '--fat')}
     <div class="left"><span>* Change targets in Settings.</span><span class="${leftCal < 0 ? 'over' : ''}"><strong class="num ${leftCal < 0 ? 'over' : ''}">${fmt(Math.abs(leftCal))}</strong> Cal ${leftCal < 0 ? 'over' : 'left'}</span></div>
   </div>`;
+  html += shareRowHTML();
+  html += recapHTML();
   html += quickHTML();
   html += habitsHTML();
   html += recsHTML(T, tot);
@@ -1167,6 +1197,78 @@ $('#view-today').addEventListener('click', e => {
   saveDoc('day-' + S.date, S.day); renderToday();
 });
 
+/* weekly recap: shows on Sunday and Monday for the 7 days just finished */
+let RECAP = null;
+const recapWeek = () => { const t = todayKey(), d = parseKey(t).getDay(); return d === 0 ? addDays(t, -6) : d === 1 ? addDays(t, -7) : null; };
+async function loadRecap() {
+  const start = recapWeek(); if (!start) { RECAP = null; return; }
+  try { if (localStorage.getItem(LS + 'recap') === start) { RECAP = null; return; } } catch (e) {}
+  const keys = Array.from({ length: 7 }, (_, i) => addDays(start, i)).filter(k => k <= todayKey());
+  const days = await listDays(start), by = {};
+  days.forEach(d => { if (keys.includes(d.date)) by[d.date] = d; });
+  const logged = keys.filter(k => by[k] && by[k].entries && by[k].entries.length);
+  if (logged.length < 2) { RECAP = null; return; }
+  const T = S.settings.targets, tot = logged.map(k => totals(by[k].entries));
+  const ser = trendSeries(S.weights.log), a = trendAt(ser, addDays(start, -1)), z = trendAt(ser, keys[keys.length - 1]);
+  RECAP = { start, n: logged.length, avg: tot.reduce((x, y) => x + y.cal, 0) / tot.length, protHit: tot.filter(x => x.p >= T.p * 0.9).length, change: a != null && z != null && ser[0].date < start ? z - a : null };
+}
+function recapHTML() {
+  const R = RECAP; if (!R || S.date !== todayKey()) return '';
+  const T = S.settings.targets;
+  return `<div class="card recap"><div class="meal-h" style="padding-top:0"><h3>Your week · ${shortDate(R.start)}–${shortDate(addDays(R.start, 6))}</h3><button class="iconbtn" type="button" id="recapX" aria-label="Hide this week’s recap" style="width:32px;height:32px">×</button></div>
+    <div class="stats"><div class="stat"><small>Days logged</small><b class="num">${R.n}/7</b><span>&nbsp;</span></div>
+      <div class="stat"><small>Avg calories</small><b class="num">${fmt(R.avg)}</b><span>target ${fmt(T.cal)}</span></div>
+      <div class="stat"><small>${R.change != null ? 'Trend' : 'Protein days'}</small><b class="num">${R.change != null ? (R.change > 0 ? '+' : '') + r1(R.change) : R.protHit + '/' + R.n}</b><span>${R.change != null ? 'lb this week' : 'hit ≥90%'}</span></div></div>
+    <p class="hint">${R.protHit}/${R.n} days you hit your protein. ${R.n >= 6 ? 'Great consistency.' : R.n >= 4 ? 'Solid. Aim for one more logged day next week.' : 'Logging more days makes your numbers more accurate.'}</p>
+    <button class="btn ghost sm" type="button" id="recapMore">See Insights</button></div>`;
+}
+
+/* share my day: draws a picture of today's numbers for a story or a group chat */
+function shareRowHTML() {
+  if (!S.day || !S.day.entries.length) return '';
+  return `<div class="share-row"><button class="btn ghost sm" type="button" id="shareDay"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px;margin-right:4px"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11v9h12v-9"/></svg>Share my day</button></div>`;
+}
+async function shareDay() {
+  const T = dayTargets(S.date, S.day), tot = totals(S.day.entries);
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#999';
+  const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  try { await document.fonts.ready; } catch (e) {}
+  const disp = '"Archivo","Arial Narrow",Arial,sans-serif', body = '"Figtree",system-ui,sans-serif';
+  const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, css('--bg')); g.addColorStop(1, css('--surface'));
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  x.fillStyle = css('--accent'); x.globalAlpha = 0.18; x.beginPath(); x.arc(W * 0.85, H * 0.12, 420, 0, 7); x.fill(); x.globalAlpha = 1;
+  x.fillStyle = css('--ink'); x.font = `900 64px ${disp}`; x.fillText('Andrade', 90, 190); const aw = x.measureText('Andrade ').width;
+  x.fillStyle = css('--accent'); x.fillText('Macros', 90 + aw, 190);
+  x.fillStyle = css('--muted'); x.font = `500 44px ${body}`; x.fillText(parseKey(S.date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }), 90, 260);
+  // big calorie ring
+  const cx = W / 2, cy = 720, r = 300, pct = T.cal ? Math.min(1, tot.cal / T.cal) : 0;
+  x.lineCap = 'round'; x.lineWidth = 46; x.strokeStyle = css('--line'); x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.stroke();
+  x.strokeStyle = css('--accent'); x.beginPath(); x.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct); x.stroke();
+  x.textAlign = 'center'; x.fillStyle = css('--ink'); x.font = `900 170px ${disp}`; x.fillText(fmt(tot.cal), cx, cy + 40);
+  x.fillStyle = css('--muted'); x.font = `500 48px ${body}`; x.fillText(`of ${fmt(T.cal)} Cal`, cx, cy + 120);
+  x.textAlign = 'left';
+  // macro bars
+  const rows = [['Protein', tot.p, T.p, css('--pro')], ['Carbs', tot.c, T.c, css('--carb')], ['Fat', tot.f, T.f, css('--fat')]];
+  rows.forEach(([n, v2, t2, col], i) => {
+    const y = 1180 + i * 170, bw = W - 180, p2 = t2 ? Math.min(1, v2 / t2) : 0;
+    x.fillStyle = css('--ink'); x.font = `800 52px ${body}`; x.fillText(n, 90, y);
+    x.textAlign = 'right'; x.fillStyle = css('--muted'); x.font = `600 46px ${body}`; x.fillText(`${fmt(v2)}g / ${fmt(t2)}g`, W - 90, y); x.textAlign = 'left';
+    x.fillStyle = css('--line'); roundRect(x, 90, y + 28, bw, 30, 15); x.fill();
+    x.fillStyle = col; if (p2 > 0) { roundRect(x, 90, y + 28, Math.max(30, bw * p2), 30, 15); x.fill(); }
+  });
+  x.fillStyle = css('--muted'); x.font = `500 40px ${body}`; x.textAlign = 'center';
+  x.fillText(`${S.day.entries.length} food${S.day.entries.length === 1 ? '' : 's'} logged${siteURL || location.host ? ' · ' + (siteURL || location.origin).replace(/^https?:\/\//, '') : ''}`, cx, H - 140);
+  const blob = await new Promise(res => c.toBlob(res, 'image/png'));
+  const file = new File([blob], 'my-day.png', { type: 'image/png' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: 'My day on Andrade Macros' }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'my-day-' + S.date + '.png'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000); toast('Image saved. Post it anywhere.');
+}
+function roundRect(x, a, b, w, h, r) { x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); }
+
 /* quick add: your most-logged foods, led by what you usually eat at this time of day */
 let FREQ = {};
 function buildFreq(days) {
@@ -1243,6 +1345,9 @@ $('#view-today').addEventListener('click', e => {
   if (dt) { S.day.type = dt.dataset.dtype; saveDoc('day-' + S.date, S.day); renderToday(); return; }
   if (e.target.closest('#recGo')) { runRecs(); return; }
   if (e.target.closest('#openRecipes')) { openFoods('recipes'); return; }
+  if (e.target.closest('#shareDay')) { shareDay(); return; }
+  if (e.target.closest('#recapX')) { try { localStorage.setItem(LS + 'recap', RECAP.start); } catch (er) {} RECAP = null; renderToday(); return; }
+  if (e.target.closest('#recapMore')) { showTab('history'); return; }
   const qa = e.target.closest('[data-quick]');
   if (qa) { const it = quickList()[+qa.dataset.quick]; if (it) { prepSheet(null); addEntries([{ name: it.name, grams: it.grams, cal: it.cal, p: it.p, c: it.c, f: it.f, src: 'quick' }]); } return; }
   if (e.target.closest('#recStop')) { if (recCtl) recCtl.abort(); return; }
@@ -1301,7 +1406,7 @@ $('#view-today').addEventListener('click', e => {
     else if (d > 90) {
       const e0 = S.day.entries.find(x => x.id === id); if (!e0) return;
       const copy = { ...e0, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), at: Date.now(), time: S.date === todayKey() ? nowHM() : e0.time };
-      S.day.entries.push(copy); noteFreq(copy); saveDoc('day-' + S.date, S.day); renderToday();
+      const pb = proteinNow(); S.day.entries.push(copy); noteFreq(copy); saveDoc('day-' + S.date, S.day); renderToday(); maybeCelebrate(pb);
       toast(`Logged ${e0.name} again`, () => { S.day.entries = S.day.entries.filter(x => x.id !== copy.id); saveDoc('day-' + S.date, S.day); renderToday(); });
     }
   };
@@ -1349,7 +1454,7 @@ async function renderWeight() {
   const cur = ser.length ? ser[ser.length - 1].t : null;
   const wkAgo = trendAt(ser, addDays(t, -7));
   const rate = cur != null && wkAgo != null && ser[0].date <= addDays(t, -7) ? cur - wkAgo : null;
-  v.innerHTML = `<div class="card"><h3>Weigh-in</h3>
+  v.innerHTML = paceHTML(ser, cur) + `<div class="card"><h3>Weigh-in</h3>
       <div class="row"><div class="field wfield-date"><label for="wDate">Date</label><input type="date" id="wDate" max="${t}" value="${t}"></div>
       <div class="field"><label for="wVal">Weight (lb)</label><input type="number" id="wVal" inputmode="decimal" step="0.1" min="50" max="700" placeholder="170.0" value="${log[t] || ''}"></div>
       <button class="btn" id="wSave">Save</button></div>
@@ -1363,7 +1468,9 @@ async function renderWeight() {
       <div class="chart" style="margin-top:12px">${recent.length >= 2 ? chartSVG(recent) : '<p class="hint">Log two or more weigh-ins to see your trend chart.</p>'}</div>
       ${rate != null && cur && rate < -0.01 * cur ? `<div class="verdict warn">You're dropping ${r1(-rate)} lb a week, more than 1% of your body weight. Faster than that tends to cost muscle and training performance; consider adding 150–200 Cal a day.</div>` : ''}
     </div>
-    <div class="card"><h3>Recent weigh-ins</h3><div class="wlist">${ser.slice(-10).reverse().map(p => `<div class="entry"><div class="nm"><div>${shortDate(p.date)}</div><small class="num">trend ${r1(p.t)}</small></div><span class="kc num">${r1(p.w)} lb</span><button class="del" data-wdel="${p.date}" aria-label="Delete weigh-in ${shortDate(p.date)}">×</button></div>`).join('') || '<p class="hint">No weigh-ins yet.</p>'}</div></div>`;
+    <div class="card"><h3>Recent weigh-ins</h3><div class="wlist">${ser.slice(-10).reverse().map(p => `<div class="entry"><div class="nm"><div>${shortDate(p.date)}</div><small class="num">trend ${r1(p.t)}</small></div><span class="kc num">${r1(p.w)} lb</span><button class="del" data-wdel="${p.date}" aria-label="Delete weigh-in ${shortDate(p.date)}">×</button></div>`).join('') || '<p class="hint">No weigh-ins yet.</p>'}</div></div>
+    <div class="card" id="photoCard"><h3>Progress photos</h3><div class="status"><div class="spin"></div>Loading…</div></div>`;
+  wireGoal(); renderPhotos();
   $('#wSave').onclick = () => {
     const d = $('#wDate').value, w = parseFloat($('#wVal').value);
     if (!d || !(w > 50 && w < 700)) { toast('Enter a weight between 50 and 700 lb.'); return; }
@@ -1376,6 +1483,99 @@ async function renderWeight() {
   if (est.value != null) { el.textContent = fmt(est.value); note.textContent = `Cal / day · ${est.days} days of data`; }
   else { el.textContent = '—'; note.textContent = `Unlocks at 10 logged days + 6 weigh-ins (${Math.min(est.days, 10)}/10 · ${Math.min(est.weighs, 6)}/6)`; }
 }
+/* goal weight: when you'll get there at your current pace */
+function paceInfo(ser, cur) {
+  const goal = S.settings.profile && +S.settings.profile.goalWeight;
+  if (!goal || cur == null || ser.length < 2) return { goal };
+  const t = todayKey(), back = ser[0].date <= addDays(t, -21) ? addDays(t, -21) : ser[0].date;
+  const then = trendAt(ser, back), days = dayNum(t) - dayNum(back);
+  if (then == null || days < 7) return { goal, early: true, days };
+  const perDay = (cur - then) / days, left = goal - cur;
+  if (Math.abs(left) < 0.5) return { goal, done: true };
+  if (perDay === 0 || Math.sign(perDay) !== Math.sign(left) || Math.abs(perDay) < 0.02) return { goal, stalled: true, perWeek: perDay * 7 };
+  const eta = addDays(t, Math.round(left / perDay));
+  return { goal, eta, perWeek: perDay * 7, weeks: Math.round(left / perDay / 7) };
+}
+function paceHTML(ser, cur) {
+  const P = paceInfo(ser, cur);
+  const form = `<div class="row" style="margin-top:10px;align-items:flex-end"><div class="field" style="max-width:150px"><label for="goalW">Goal weight (lb)</label><input type="number" id="goalW" inputmode="decimal" step="0.5" min="70" max="600" value="${P.goal || ''}" placeholder="160"></div><button class="btn ghost" id="goalSave">${P.goal ? 'Update' : 'Set goal'}</button></div>`;
+  if (!P.goal) return `<div class="card"><h3>Goal weight</h3><p class="hint" style="margin:0">Set a goal and the app works out when you’ll get there from your trend.</p>${form}</div>`;
+  let big, sub, warn = false;
+  if (P.done) { big = `You hit ${r1(P.goal)} lb`; sub = 'Goal reached. Set a new one, or switch your targets to maintenance in Settings.'; }
+  else if (cur == null || P.early) { big = `Goal: ${r1(P.goal)} lb`; sub = `Keep weighing in. Your goal date shows after about a week of weigh-ins${P.days != null ? ` (${Math.max(0, P.days)}/7 days)` : ''}.`; }
+  else if (P.stalled) { warn = true; big = 'Not moving toward your goal yet'; sub = `Your trend is ${Math.abs(P.perWeek) < 0.15 ? 'flat' : (P.perWeek > 0 ? 'up ' : 'down ') + r1(Math.abs(P.perWeek)) + ' lb a week'}. ${r1(Math.abs(P.goal - cur))} lb to go to ${r1(P.goal)} lb.`; }
+  else { big = `On pace for ${r1(P.goal)} lb around ${parseKey(P.eta).toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(P.eta.slice(0, 4) !== todayKey().slice(0, 4) ? { year: 'numeric' } : {}) })}`; sub = `${P.perWeek > 0 ? '+' : '−'}${r1(Math.abs(P.perWeek))} lb a week on your trend · ${r1(Math.abs(P.goal - cur))} lb to go${P.weeks > 0 ? ` · about ${P.weeks} week${P.weeks === 1 ? '' : 's'}` : ''}`; }
+  return `<div class="pace ${warn ? 'warn' : ''}"><small>Goal</small><b>${esc(big)}</b><p class="num">${esc(sub)}</p>
+    <details style="margin-top:8px"><summary class="hint" style="cursor:pointer;margin:0">Change goal</summary>${form}</details></div>`;
+}
+function wireGoal() {
+  const b = $('#goalSave'); if (!b) return;
+  b.onclick = () => {
+    const g = parseFloat($('#goalW').value);
+    if (!(g >= 70 && g <= 600)) { toast('Enter a goal between 70 and 600 lb.'); return; }
+    S.settings.profile = { ...(S.settings.profile || {}), goalWeight: r1(g) }; saveDoc('settings', S.settings); toast('Goal saved'); renderWeight();
+  };
+}
+
+/* progress photos: only you can see them */
+let PHOTOS = null, photoPick = null;
+async function renderPhotos() {
+  const card = $('#photoCard'); if (!card) return;
+  if (!PHOTOS) {
+    try { PHOTOS = (await api('/api/doc?photos=1')).photos || []; }
+    catch (e) { card.innerHTML = `<h3>Progress photos</h3><p class="hint">${e.code === 'offline' ? 'Connect to the internet to see your photos.' : 'Couldn’t load your photos.'}</p>`; return; }
+  }
+  if (!$('#photoCard')) return;
+  const n = PHOTOS.length;
+  if (!photoPick || !PHOTOS.some(p => p.date === photoPick[0]) || !PHOTOS.some(p => p.date === photoPick[1])) photoPick = n ? [PHOTOS[0].date, PHOTOS[n - 1].date] : null;
+  const ser = trendSeries(S.weights.log);
+  const wAt = d => { const t = trendAt(ser, d); return t != null ? r1(t) + ' lb' : ''; };
+  card.innerHTML = `<h3>Progress photos</h3>
+    <p class="hint" style="margin:0 0 10px">Same spot, same lighting, about once a week. Only you can see these.</p>
+    ${n ? `<div class="thumbs" role="group" aria-label="Your photos">${PHOTOS.map(p => `<button type="button" data-ph="${p.date}" aria-pressed="${photoPick.includes(p.date)}"><img src="${p.thumb || ''}" alt="Photo from ${shortDate(p.date)}">${shortDate(p.date)}</button>`).join('')}</div>
+      ${n >= 2 ? `<div class="compare"><figure><img id="phA" alt="Before"><figcaption><b>${shortDate(photoPick[0])}</b> ${wAt(photoPick[0])}</figcaption></figure><figure><img id="phB" alt="After"><figcaption><b>${shortDate(photoPick[1])}</b> ${wAt(photoPick[1])}</figcaption></figure></div>
+        <p class="hint">Tap any two photos to compare them.</p>` : `<div class="compare" style="grid-template-columns:1fr"><figure><img id="phA" alt="Your photo" style="max-width:240px;margin:0 auto"></figure></div><p class="hint">Add another photo in a week or two to compare.</p>`}` : ''}
+    <div class="row" style="margin-top:10px"><label class="btn${n ? ' ghost' : ''}" for="phIn">Add a photo</label>${n ? `<button class="btn ghost" type="button" id="phDel">Delete a photo…</button>` : ''}</div>
+    <input type="file" id="phIn" accept="image/*" class="vh" tabindex="-1">`;
+  const show = async (id, date) => { const im = $('#' + id); if (!im) return; im.src = (PHOTOS.find(p => p.date === date) || {}).thumb || ''; const d = await getDoc('photo-' + date); if (d && d.img && $('#' + id)) $('#' + id).src = d.img; };
+  if (n) { show('phA', photoPick[0]); if (n >= 2) show('phB', photoPick[1]); }
+  card.querySelectorAll('[data-ph]').forEach(b => b.onclick = () => {
+    const d = b.dataset.ph; if (photoPick.includes(d)) return;
+    photoPick = [photoPick[1], d].sort(); renderPhotos();
+  });
+  $('#phIn').onchange = async e => {
+    const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
+    const date = todayKey();
+    card.querySelector('.row').innerHTML = '<div class="status"><div class="spin"></div>Saving photo…</div>';
+    try {
+      const img = await shrinkTo(f, 900, 0.72), thumb = await shrinkTo(f, 200, 0.6);
+      await api('/api/doc?id=photo-' + date, { method: 'PUT', body: JSON.stringify({ kind: 'photo', date, img, thumb }) });
+      const replaced = PHOTOS && PHOTOS.some(p => p.date === date);
+      PHOTOS = null; photoPick = null; toast(replaced ? 'Today’s photo replaced' : 'Photo saved');
+    } catch (er) { toast(er.code === 'offline' ? 'You’re offline. Add the photo when you’re connected.' : er.text || 'Couldn’t save that photo.'); }
+    renderPhotos();
+  };
+  const del = $('#phDel');
+  if (del) del.onclick = () => {
+    card.querySelector('.row').innerHTML = `<p class="hint" style="margin:0;width:100%">Tap the photo to delete:</p>${PHOTOS.map(p => `<button class="btn ghost sm" type="button" data-phdel="${p.date}">${shortDate(p.date)}</button>`).join('')}<button class="btn sm" type="button" id="phDelDone">Done</button>`;
+    card.querySelectorAll('[data-phdel]').forEach(b => b.onclick = async () => {
+      if (!confirm('Delete the photo from ' + shortDate(b.dataset.phdel) + '? This can’t be undone.')) return;
+      try { await api('/api/doc?id=photo-' + b.dataset.phdel, { method: 'DELETE' }); PHOTOS = PHOTOS.filter(p => p.date !== b.dataset.phdel); photoPick = null; toast('Photo deleted'); renderPhotos(); }
+      catch (er) { toast(er.text || 'Couldn’t delete it.'); }
+    });
+    $('#phDelDone').onclick = renderPhotos;
+  };
+}
+async function shrinkTo(f, max, q) {
+  let src;
+  if (window.createImageBitmap) { try { src = await createImageBitmap(f, { imageOrientation: 'from-image' }); } catch (e) { src = null; } }
+  if (!src) src = await new Promise((res, rej) => { const im = new Image(); const u = URL.createObjectURL(f); im.onload = () => { URL.revokeObjectURL(u); res(im); }; im.onerror = () => { URL.revokeObjectURL(u); rej(new Error('decode')); }; im.src = u; });
+  const w0 = src.width || src.naturalWidth, h0 = src.height || src.naturalHeight, k = Math.min(1, max / Math.max(w0, h0));
+  const c = document.createElement('canvas'); c.width = Math.round(w0 * k); c.height = Math.round(h0 * k);
+  c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', q);
+}
+
 async function estimateTDEE() {
   const ser = trendSeries(S.weights.log), t = todayKey(), start = addDays(t, -21);
   const days = (await listDays(start)).filter(d => d.date < t && d.entries && d.entries.length);
@@ -1392,6 +1592,21 @@ $('#view-weight').addEventListener('click', e => {
   if (d) { const k = d.dataset.wdel, old = S.weights.log[k]; delete S.weights.log[k]; saveDoc('weights', S.weights); renderWeight();
     toast(`Removed weigh-in for ${shortDate(k)}`, () => { S.weights.log[k] = old; saveDoc('weights', S.weights); if (S.tab === 'weight') renderWeight(); }); }
 });
+
+/* logging streak with a weekly freeze: counts back from today (or yesterday if today isn't logged yet);
+   one unlogged day per Mon–Sun week is skipped instead of ending the streak */
+function logStreak(isLogged, t) {
+  let k = isLogged(t) ? t : addDays(t, -1), days = 0, frozen = 0;
+  const used = {};
+  const weekOf = key => { const d = parseKey(key), off = (d.getDay() + 6) % 7; return addDays(key, -off); };
+  for (let i = 0; i < 400; i++) {
+    if (isLogged(k)) { days++; k = addDays(k, -1); continue; }
+    const w = weekOf(k);
+    if (!used[w] && isLogged(addDays(k, -1))) { used[w] = true; frozen++; k = addDays(k, -1); continue; }
+    break;
+  }
+  return { days, frozen };
+}
 
 /* ---------- Week ---------- */
 async function renderHistory() {
@@ -1435,7 +1650,7 @@ async function renderHistory() {
   // ---- 30-day analytics ----
   const k30 = Array.from({ length: 30 }, (_, i) => addDays(t, i - 29));
   const L30 = k30.filter(k => k < t && by[k] && by[k].cal > 0);
-  let streak = 0; { let k = by[t] && by[t].cal > 0 ? t : addDays(t, -1); while (by[k] && by[k].cal > 0) { streak++; k = addDays(k, -1); } }
+  const SK = logStreak(k => by[k] && by[k].cal > 0, t), streak = SK.days;
   const sum = f => L30.reduce((a, k) => a + by[k][f], 0);
   const n30 = L30.length || 1;
   const pc = sum('p') * 4, cc = sum('c') * 4, fc = sum('f') * 9, mc = pc + cc + fc || 1;
@@ -1465,9 +1680,10 @@ async function renderHistory() {
     habits: habRows.map(h => ({ habit: h.name, pct: h.pct, streak: h.streak })), goal: S.settings.profile ? S.settings.profile.goal : null, diet: dietName0(myDiet()) };
   const analytics = `
     <div class="card"><h3>Streaks</h3><div class="stats">
-      <div class="stat"><small>Logging streak</small><b class="num">${streak}</b><span>day${streak === 1 ? '' : 's'} in a row</span></div>
+      <div class="stat"><small>Logging streak</small><b class="num">${streak}</b><span>day${streak === 1 ? '' : 's'}${SK.frozen ? ` · ${SK.frozen} freeze${SK.frozen === 1 ? '' : 's'} used` : ' in a row'}</span></div>
       <div class="stat"><small>Protein days</small><b class="num">${L30.length ? protRate + '%' : '—'}</b><span>hit ≥90%, last 30</span></div>
-      <div class="stat"><small>On-target days</small><b class="num">${L30.length ? calRate + '%' : '—'}</b><span>within 10% of Cal</span></div></div></div>
+      <div class="stat"><small>On-target days</small><b class="num">${L30.length ? calRate + '%' : '—'}</b><span>within 10% of Cal</span></div></div>
+      <p class="hint">Streak freeze: one missed day each week (Mon–Sun) won’t break your streak.</p></div>
     ${hc.on.length ? `<div class="card"><h3>Habits, last 30 days</h3><div class="ibars">${habRows.map(h => `<div class="ibar"><span>${esc(h.name)}</span><div class="bar"><i style="width:${h.pct}%;background:${barColor(h.pct >= 80 ? 95 : h.pct >= 40 ? 60 : 20, '--accent')}"></i></div><span class="num">${h.pct}%${h.streak > 1 ? ' · ' + h.streak + 'd' : ''}</span></div>`).join('')}</div><p class="hint">Percent of days you checked it off. The number after the dot is your current streak.</p></div>` : ''}
     <div class="card"><h3>Where your calories come from</h3>
       ${L30.length ? `<div class="split"><i style="width:${S30.split.protein}%;background:var(--pro)"></i><i style="width:${S30.split.carbs}%;background:var(--carb)"></i><i style="width:${S30.split.fat}%;background:var(--fat)"></i></div>
@@ -2145,8 +2361,27 @@ function renderReview() {
   $('#rBack').onclick = () => { review = null; renderSheet(); };
   $('#rSave').onclick = () => addEntries(R.items.map(it => { const s = scaled(it); return { name: it.name.trim() || 'Food', grams: it.serv ? it.base.g * it.factor : it.base.g > 0 ? it.grams : 0, ...s, src: it.src }; }));
 }
+function proteinNow() { return S.day ? totals(S.day.entries).p : 0; }
+function maybeCelebrate(before) {
+  if (!S.day || S.date !== todayKey() || S.day.celebrated) return;
+  const T = dayTargets(S.date, S.day), after = proteinNow();
+  if (!(T.p > 0) || before >= T.p || after < T.p) return;
+  S.day.celebrated = true; saveDoc('day-' + S.date, S.day);
+  setTimeout(() => {
+    toast(`Protein goal hit: ${fmt(after)}g. Nice work.`);
+    const card = document.querySelector('#view-today .label, #view-today .ringsdash, #view-today .tiles');
+    if (card) { card.classList.remove('celebrate'); void card.offsetWidth; card.classList.add('celebrate'); }
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const box = document.createElement('div'); box.className = 'confetti'; box.setAttribute('aria-hidden', 'true');
+    const cols = ['var(--pro)', 'var(--carb)', 'var(--fat)', 'var(--accent)', 'var(--good)'];
+    for (let i = 0; i < 46; i++) { const p = document.createElement('i'); p.style.left = Math.random() * 100 + 'vw'; p.style.background = cols[i % cols.length]; p.style.setProperty('--dx', (Math.random() * 120 - 60) + 'px'); p.style.setProperty('--r', (Math.random() * 720 - 360) + 'deg'); p.style.animationDelay = Math.random() * 0.35 + 's'; p.style.animationDuration = 1.4 + Math.random() * 0.9 + 's'; box.appendChild(p); }
+    document.body.appendChild(box); setTimeout(() => box.remove(), 2800);
+    if (navigator.vibrate) navigator.vibrate([30, 40, 30]);
+  }, 250);
+}
 function addEntries(list) {
   if (!S.day) return;
+  const pBefore = proteinNow();
   const meal = currentMeal(), time = $('#timeSel').value || nowHM();
   const made = list.map(e => ({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), meal, time, name: e.name, grams: Math.round(e.grams || 0), cal: Math.round(e.cal), p: r1(e.p), c: r1(e.c), f: r1(e.f), src: e.src || 'manual', at: Date.now() }));
   S.day.entries.push(...made);
@@ -2158,6 +2393,7 @@ function addEntries(list) {
   if (photoURL) { URL.revokeObjectURL(photoURL); photoURL = null; } photo = null; review = null;
   closeSheet(); renderToday();
   toast(`Logged ${made.length} item${made.length === 1 ? '' : 's'} · ${fmt(made.reduce((a, m) => a + m.cal, 0))} Cal`);
+  maybeCelebrate(pBefore);
 }
 
 /* ---------- voice: say what you ate ---------- */
@@ -2468,6 +2704,7 @@ renderToday();
   if (!(st && st.targets)) S.needsSetup = true;
   if (w && w.log) S.weights = { kind: 'weights', log: { ...w.log } };
   await loadDay(S.date);
+  loadRecap().then(() => { if (RECAP && S.tab === 'today' && S.day) renderToday(); }).catch(() => {});
   listDays(addDays(todayKey(), -45)).then(ds => { buildFreq(ds.filter(d => d.date !== S.date).concat(S.day ? [S.day] : [])); if (S.tab === 'today' && S.day) renderToday(); });
   if (S.tab !== 'today') showTab(S.tab);
   checkAI();

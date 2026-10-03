@@ -2,10 +2,11 @@
 // GET  /api/doc?id=settings        -> { data } (null if none)
 // PUT  /api/doc?id=day-2026-10-02  body: the document
 // GET  /api/doc?days_since=2026-09-01 -> { days: [...] }
+// GET  /api/doc?photos=1           -> { photos: [{ date, thumb }] }   (progress photos are docs named photo-YYYY-MM-DD)
 import { query } from '../lib/db.js';
 import { send, fail, readJson, currentUser, sameOrigin, handleError } from '../lib/http.js';
 
-const DOC_ID = /^(settings|weights|day-\d{4}-\d{2}-\d{2})$/;
+const DOC_ID = /^(settings|weights|day-\d{4}-\d{2}-\d{2}|photo-\d{4}-\d{2}-\d{2})$/;
 const MAX = 400 * 1024;
 
 export default async function handler(req, res) {
@@ -19,10 +20,19 @@ export default async function handler(req, res) {
     if (req.method === 'GET' && since) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(since)) return fail(res, 400, 'bad_date');
       const r = await query(
-        `SELECT data FROM docs WHERE user_id = $1 AND doc_id LIKE 'day-%' AND doc_id >= $2 ORDER BY doc_id`,
+        `SELECT doc_id, data FROM docs WHERE user_id = $1 AND doc_id LIKE 'day-%' AND doc_id >= $2 ORDER BY doc_id`,
         [me.id, 'day-' + since]
       );
-      return send(res, 200, { days: r.rows.map(x => x.data) });
+      return send(res, 200, { days: r.rows.map(x => ({ ...x.data, date: x.doc_id.slice(4) })) });
+    }
+
+    // progress photos: just the dates and small thumbnails; full photos load one at a time
+    if (req.method === 'GET' && url.searchParams.get('photos')) {
+      const r = await query(
+        `SELECT substr(doc_id, 7) AS date, data->>'thumb' AS thumb FROM docs WHERE user_id = $1 AND doc_id LIKE 'photo-%' ORDER BY doc_id`,
+        [me.id]
+      );
+      return send(res, 200, { photos: r.rows });
     }
 
     if (!id || !DOC_ID.test(id)) return fail(res, 400, 'bad_id');
